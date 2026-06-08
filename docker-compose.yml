@@ -6,7 +6,7 @@ services:
   # One-shot: applies the Alembic schema + RLS policies as the owner role 'aegis'.
   migrate:
     build: ./backend
-    entrypoint: ["/venv/bin/python", "-c", "from alembic.config import main; main(['upgrade','head'])"]
+    entrypoint: ["/usr/bin/python3.11", "-c", "from alembic.config import main; main(['upgrade','head'])"]
     environment:
       AEGIS_DATABASE_URL: postgresql+psycopg://aegis:aegis@postgres:5432/aegis
     depends_on:
@@ -30,7 +30,9 @@ services:
       AEGIS_DATABASE_URL: postgresql+psycopg://aegis_app:aegis_app@postgres:5432/aegis
       AEGIS_REDIS_URL: redis://redis:6379/0
       AEGIS_NEO4J_URI: bolt://neo4j:7687
-    ports: ["8000:8000"]
+    # Host port is overridable to avoid clashes with other local projects:
+    #   AEGIS_API_PORT=18000 docker compose up
+    ports: ["${AEGIS_API_PORT:-8000}:8000"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,20 +58,24 @@ services:
       KC_HOSTNAME_STRICT: "false"
     volumes:
       - "./infra/keycloak/realm-aegisflow.json:/opt/keycloak/data/import/realm-aegisflow.json:ro"
-    ports: ["8080:8080"]
+    ports: ["${AEGIS_KEYCLOAK_PORT:-8080}:8080"]
 
   web:
     build: ./frontend
-    ports: ["5173:8080"]
+    ports: ["${AEGIS_WEB_PORT:-5173}:8080"]
     depends_on: [api]
 
+  # Datastores are NOT published to the host by default: the app reaches them over
+  # the internal docker network, and not exposing them avoids clashes with other
+  # local projects (e.g. a local Postgres/Redis on 5432/6379) and reduces attack
+  # surface. Uncomment a `ports:` line below if you want host access for debugging.
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: aegis
       POSTGRES_PASSWORD: aegis
       POSTGRES_DB: aegis
-    ports: ["5432:5432"]
+    # ports: ["5433:5432"]   # uncomment for host access (psql)
     volumes:
       - "postgres-data:/var/lib/postgresql/data"
       - "./infra/docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-app-role.sql:ro"
@@ -82,18 +88,16 @@ services:
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
-    ports: ["6379:6379"]
+    # ports: ["6380:6379"]   # uncomment for host access
 
   neo4j:
     image: neo4j:5-community
     environment:
       NEO4J_AUTH: neo4j/aegis-neo4j
-    ports: ["7474:7474", "7687:7687"]
+    # ports: ["7474:7474", "7687:7687"]   # uncomment for the Neo4j browser
     volumes: ["neo4j-data:/data"]
 
-  # Identity, workflow, streaming and observability are declared here for the
-  # integrated stack; uncomment to bring them up.
-  # keycloak: { image: quay.io/keycloak/keycloak:25.0, command: ["start-dev"], ports: ["8080:8080"] }
+  # Workflow + streaming for the full production topology; uncomment to bring up.
   # temporal: { image: temporalio/auto-setup:1.24, ports: ["7233:7233"] }
   # kafka:    { image: bitnami/kafka:3.7, ports: ["9092:9092"] }
 

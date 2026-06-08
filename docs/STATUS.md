@@ -23,6 +23,13 @@ Auth (OIDC/JWT via Keycloak, verified end-to-end) ✅ · RBAC+ABAC ✅ · Config
 
 See [AUTH.md](AUTH.md) for the Keycloak realm, demo users, and the verified auth matrix.
 
+**Full `docker compose up` verified end-to-end** (distroless API + Keycloak + Postgres):
+real OIDC token → ingest → persisted to Postgres; ABAC denies a tier3 analyst on a
+crown-jewel (FIN-host) investigation (403) while soc_manager is allowed (200); a raw
+unfiltered count as the non-superuser app role shows the acme rows and 0 for globex.
+Datastores are internal-only by default and published ports are overridable
+(`AEGIS_API_PORT`, `AEGIS_KEYCLOAK_PORT`, `AEGIS_WEB_PORT`) to avoid host clashes.
+
 **Persistence:** `AEGIS_PERSISTENCE=memory` (default, self-contained) or `postgres`
 (SQLAlchemy + Row-Level Security). RLS tenant isolation is verified at the database
 layer by `tests/integration/test_rls.py` and reproducible via `docker compose up`
