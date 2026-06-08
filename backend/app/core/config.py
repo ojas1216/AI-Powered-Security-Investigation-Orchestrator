@@ -33,9 +33,13 @@ class Settings(BaseSettings):
     )
     allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     connector_mode: ConnectorMode = ConnectorMode.MOCK
+    # Persistence backend: "memory" (self-contained) or "postgres" (RLS-isolated).
+    persistence: str = "memory"
 
     # ── Datastores ────────────────────────────────────────────────────────────
-    database_url: str = "postgresql+psycopg://aegis:aegis@localhost:5432/aegis"
+    # NOTE: in postgres mode the app must connect as a NON-superuser role
+    # (superusers bypass Row-Level Security). See infra/docker/postgres-init.sql.
+    database_url: str = "postgresql+psycopg://aegis_app:aegis_app@localhost:5432/aegis"
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = "aegis-neo4j"
@@ -85,6 +89,10 @@ class Settings(BaseSettings):
     @property
     def use_mock_connectors(self) -> bool:
         return self.connector_mode == ConnectorMode.MOCK
+
+    @property
+    def use_postgres(self) -> bool:
+        return self.persistence == "postgres"
 
 
 @lru_cache

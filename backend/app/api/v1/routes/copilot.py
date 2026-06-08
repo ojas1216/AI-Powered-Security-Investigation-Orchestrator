@@ -8,7 +8,7 @@ from app.api.deps import require
 from app.core.authz import Permission
 from app.core.security import Principal
 from app.engines.copilot.guards import sanitize_untrusted, validate_output
-from app.repository import repo
+from app.repository import get_repo
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ async def ask(
     The question is treated as untrusted input (sanitized). The answer is built from
     structured facts only and validated before return — no tool execution, ever.
     """
-    pkg = repo.get(principal.tenant, body.investigation_id)
+    pkg = get_repo().get(principal.tenant, body.investigation_id)
     question = sanitize_untrusted(body.question).lower()
 
     # Deterministic, grounded responses to common analyst questions. (In live mode

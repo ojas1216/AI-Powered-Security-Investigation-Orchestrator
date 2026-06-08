@@ -6,7 +6,7 @@ Legend: ✅ implemented & tested · 🔌 interface + runnable mock (swap creds f
 |---|---------------------------------|--------|------------------------------------------------------|
 | 1 | Alert Ingestion Engine          | ✅/🔌  | Webhook+API done; Splunk/Sentinel/Elastic normalizers ✅; Kafka/syslog 🔌 |
 | 2 | IOC Extraction Engine           | ✅     | Full, RFC + defang aware, unit-tested                |
-| 3 | Threat-Intel Correlation        | ✅/🔌  | Aggregator + verdict fusion ✅; VT/AbuseIPDB/GreyNoise/OTX/OpenCTI/MISP 🔌 |
+| 3 | Threat-Intel Correlation        | ✅/🔌  | Aggregator + verdict fusion ✅; VT/AbuseIPDB/GreyNoise/OTX live connectors + respx tests ✅; OpenCTI/MISP 🔌 |
 | 4 | Sandbox Automation              | 🔌     | Base + mock detonation; Joe/Falcon/CAPE/Any.Run 🔌   |
 | 5 | EDR Investigation               | 🔌     | Base + mock telemetry; CRWD/S1/Defender/Wazuh 🔌     |
 | 6 | Email Investigation             | 🔌     | Base + mock; M365/Workspace/Mimecast/Proofpoint 🔌   |
@@ -17,6 +17,12 @@ Legend: ✅ implemented & tested · 🔌 interface + runnable mock (swap creds f
 | 11| Ticket Automation               | 🔌     | ServiceNow + Jira interfaces + mock                  |
 | 12| AI SOC Copilot                  | ✅/🔌  | Guards + prompts ✅; Ollama client 🔌                |
 | 13| Playbook Recommendation         | ✅     | MITRE-driven rule engine                             |
-| 14| Multi-Tenant Architecture       | ✅     | TenantContext + Postgres RLS + ABAC                  |
+| 14| Multi-Tenant Architecture       | ✅     | TenantContext + Postgres RLS (verified) + ABAC       |
 
 Auth (OIDC/JWT) ✅ · RBAC+ABAC ✅ · Config/logging/OTel ✅ · CI/CD security ✅ · Docker/K8s/TF 🧱→🔌
+
+**Persistence:** `AEGIS_PERSISTENCE=memory` (default, self-contained) or `postgres`
+(SQLAlchemy + Row-Level Security). RLS tenant isolation is verified at the database
+layer by `tests/integration/test_rls.py` and reproducible via `docker compose up`
+(the `migrate` service applies the schema; the API connects as the non-superuser
+`aegis_app` role so RLS is enforced).

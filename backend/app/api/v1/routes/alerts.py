@@ -9,7 +9,7 @@ from app.core.logging import get_logger
 from app.core.security import Principal
 from app.ingestion.normalizers import get_normalizer
 from app.orchestrator import run_investigation
-from app.repository import repo
+from app.repository import get_repo
 from app.schemas.alert import RawAlert
 from app.schemas.common import SourceProduct
 from app.schemas.investigation import InvestigationPackage
@@ -35,5 +35,5 @@ async def ingest_alert(
     log.info("alert_ingested", tenant=principal.tenant, source=source.value,
              alert_id=alert.source_alert_id, actor=principal.username)
     pkg = await run_investigation(principal.tenant, alert)
-    repo.save(pkg)
+    get_repo().save(pkg)
     return pkg

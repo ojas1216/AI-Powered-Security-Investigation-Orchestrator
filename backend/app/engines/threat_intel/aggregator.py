@@ -105,7 +105,13 @@ class ThreatIntelAggregator:
 
 
 def build_aggregator() -> ThreatIntelAggregator:
-    """Wire connectors based on configured mode."""
+    """Wire connectors based on configured mode.
+
+    In live mode only connectors that actually have a key configured are wired,
+    so a deployment with just a VirusTotal key works without erroring on the rest.
+    If no key is present at all we fall back to the mock so the platform never
+    silently produces empty enrichment.
+    """
     if settings.use_mock_connectors:
         from app.engines.threat_intel.connectors.mock import MockThreatIntelConnector
 
@@ -113,8 +119,23 @@ def build_aggregator() -> ThreatIntelAggregator:
 
     from app.engines.threat_intel.connectors.abuseipdb import AbuseIPDBConnector
     from app.engines.threat_intel.connectors.greynoise import GreyNoiseConnector
+    from app.engines.threat_intel.connectors.otx import OTXConnector
     from app.engines.threat_intel.connectors.virustotal import VirusTotalConnector
 
-    return ThreatIntelAggregator(
-        [VirusTotalConnector(), AbuseIPDBConnector(), GreyNoiseConnector()]
-    )
+    connectors: list[ThreatIntelConnector] = []
+    if settings.virustotal_api_key:
+        connectors.append(VirusTotalConnector())
+    if settings.abuseipdb_api_key:
+        connectors.append(AbuseIPDBConnector())
+    if settings.greynoise_api_key:
+        connectors.append(GreyNoiseConnector())
+    if settings.otx_api_key:
+        connectors.append(OTXConnector())
+
+    if not connectors:
+        from app.engines.threat_intel.connectors.mock import MockThreatIntelConnector
+
+        log.warning("live_mode_no_keys_configured_fallback_mock")
+        connectors.append(MockThreatIntelConnector())
+
+    return ThreatIntelAggregator(connectors)

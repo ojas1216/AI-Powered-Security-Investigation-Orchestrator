@@ -3,17 +3,38 @@
 name: aegisflow
 
 services:
+  # One-shot: applies the Alembic schema + RLS policies as the owner role 'aegis'.
+  migrate:
+    build: ./backend
+    entrypoint: ["/venv/bin/python", "-c", "from alembic.config import main; main(['upgrade','head'])"]
+    environment:
+      AEGIS_DATABASE_URL: postgresql+psycopg://aegis:aegis@postgres:5432/aegis
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build: ./backend
     environment:
       AEGIS_ENV: local
       AEGIS_CONNECTOR_MODE: mock
       AEGIS_AUTH_DEV_BYPASS: "true"
-      AEGIS_DATABASE_URL: postgresql+psycopg://aegis:aegis@postgres:5432/aegis
+      AEGIS_PERSISTENCE: postgres
+      # Connects as the least-privilege role so RLS is enforced (NOT 'aegis').
+      AEGIS_DATABASE_URL: postgresql+psycopg://aegis_app:aegis_app@postgres:5432/aegis
       AEGIS_REDIS_URL: redis://redis:6379/0
       AEGIS_NEO4J_URI: bolt://neo4j:7687
     ports: ["8000:8000"]
-    depends_on: [postgres, redis, neo4j]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_started
     read_only: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
@@ -30,7 +51,14 @@ services:
       POSTGRES_PASSWORD: aegis
       POSTGRES_DB: aegis
     ports: ["5432:5432"]
-    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    volumes:
+      - "postgres-data:/var/lib/postgresql/data"
+      - "./infra/docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-app-role.sql:ro"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis -d aegis"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7-alpine
