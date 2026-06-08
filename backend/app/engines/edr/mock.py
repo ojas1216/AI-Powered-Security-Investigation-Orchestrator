@@ -20,13 +20,16 @@ class MockEDR(EDRConnector):
     name = "mock-edr"
 
     async def hunt(self, iocs: list[IOC]) -> list[EDRHit]:
+        # All confirmed indicators in this scenario resolve to the same compromised
+        # endpoint (the host named in the originating alert), which is the realistic
+        # shape for a single user clicking a phishing link.
         hits: list[EDRHit] = []
-        for i, ioc in enumerate(iocs):
+        for ioc in iocs:
             if ioc.value.lower() in _CONFIRMED_VALUES:
                 hits.append(
                     EDRHit(
                         ioc=ioc,
-                        host=f"WS-FIN-{42 + i:03d}",
+                        host="WS-FIN-042",
                         user="jdoe",
                         process="powershell.exe",
                         observed_at=datetime.now(timezone.utc),
