@@ -1,7 +1,72 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-body {
-  @apply bg-slate-950 text-slate-100;
+/* Class-based dark mode (html.dark) instead of prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design tokens (AegisFlow enterprise palette) ──────────────────────────── */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace;
+
+  --color-bg: #0b1020;
+  --color-surface: #111827;
+  --color-surface-2: #0f1626;
+  --color-border: #1f2937;
+  --color-muted: #64748b;
+  --color-fg: #e2e8f0;
+  --color-fg-subtle: #94a3b8;
+
+  --color-critical: #ef4444;
+  --color-high: #f97316;
+  --color-medium: #f59e0b;
+  --color-low: #10b981;
+  --color-info: #3b82f6;
+
+  --color-accent: #3b82f6;
+  --color-accent-fg: #eff6ff;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Slim, dark scrollbars to match the enterprise theme. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #243049;
+    border-radius: 6px;
+    border: 2px solid var(--color-bg);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+  }
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+  }
 }
