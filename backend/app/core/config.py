@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import Annotated
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class ConnectorMode(StrEnum):
@@ -31,8 +32,26 @@ class Settings(BaseSettings):
     secret_key: str = Field(
         default="change-me-32-bytes-min-rotate-via-vault", min_length=16
     )
-    allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    # NoDecode: take the raw env string (the settings source won't JSON-decode it)
+    # so the validator below can accept a comma-separated list — the natural form.
+    allowed_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:5173"]
+    )
     connector_mode: ConnectorMode = ConnectorMode.MOCK
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, v: object) -> object:
+        # Accept a comma-separated string or a JSON list:
+        #   AEGIS_ALLOWED_ORIGINS=http://a,http://b   or   ["http://a","http://b"]
+        if isinstance(v, str):
+            import json
+
+            s = v.strip()
+            if s.startswith("["):
+                return json.loads(s)
+            return [o.strip() for o in s.split(",") if o.strip()]
+        return v
     # Persistence backend: "memory" (self-contained) or "postgres" (RLS-isolated).
     persistence: str = "memory"
 
