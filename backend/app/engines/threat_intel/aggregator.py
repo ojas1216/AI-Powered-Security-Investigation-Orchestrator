@@ -119,6 +119,8 @@ def build_aggregator() -> ThreatIntelAggregator:
 
     from app.engines.threat_intel.connectors.abuseipdb import AbuseIPDBConnector
     from app.engines.threat_intel.connectors.greynoise import GreyNoiseConnector
+    from app.engines.threat_intel.connectors.misp import MISPConnector
+    from app.engines.threat_intel.connectors.opencti import OpenCTIConnector
     from app.engines.threat_intel.connectors.otx import OTXConnector
     from app.engines.threat_intel.connectors.virustotal import VirusTotalConnector
 
@@ -131,6 +133,10 @@ def build_aggregator() -> ThreatIntelAggregator:
         connectors.append(GreyNoiseConnector())
     if settings.otx_api_key:
         connectors.append(OTXConnector())
+    if settings.opencti_url and settings.opencti_token:
+        connectors.append(OpenCTIConnector())
+    if settings.misp_url and settings.misp_key:
+        connectors.append(MISPConnector())
 
     if not connectors:
         from app.engines.threat_intel.connectors.mock import MockThreatIntelConnector

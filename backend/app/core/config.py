@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     opencti_token: str = ""
     misp_url: str = ""
     misp_key: str = ""
+    # Verify TLS to self-hosted TI/sandbox platforms. Only set False for lab use.
+    internal_tls_verify: bool = True
+
+    # ── Sandbox (live) ────────────────────────────────────────────────────────
+    cape_url: str = ""  # e.g. https://cape.internal
+    cape_token: str = ""
 
     # ── AI copilot ────────────────────────────────────────────────────────────
     ollama_base_url: str = "http://localhost:11434"

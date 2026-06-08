@@ -1,0 +1,99 @@
+{
+  "realm": "aegisflow",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      { "name": "super_admin" },
+      { "name": "soc_manager" },
+      { "name": "tier1_analyst" },
+      { "name": "tier2_analyst" },
+      { "name": "tier3_analyst" },
+      { "name": "threat_hunter" },
+      { "name": "incident_responder" },
+      { "name": "auditor" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "aegisflow-api",
+      "name": "AegisFlow API",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "aegisflow-api-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "protocolMappers": [
+        {
+          "name": "audience-aegisflow-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "aegisflow-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "tenant",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant",
+            "claim.name": "tenant",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "analyst",
+      "enabled": true,
+      "email": "analyst@acme.example",
+      "emailVerified": true,
+      "firstName": "Aria",
+      "lastName": "Analyst",
+      "attributes": { "tenant": ["acme"] },
+      "credentials": [
+        { "type": "password", "value": "analyst-pass", "temporary": false }
+      ],
+      "realmRoles": ["tier3_analyst"]
+    },
+    {
+      "username": "manager",
+      "enabled": true,
+      "email": "manager@acme.example",
+      "emailVerified": true,
+      "firstName": "Morgan",
+      "lastName": "Manager",
+      "attributes": { "tenant": ["acme"] },
+      "credentials": [
+        { "type": "password", "value": "manager-pass", "temporary": false }
+      ],
+      "realmRoles": ["soc_manager"]
+    },
+    {
+      "username": "globex-analyst",
+      "enabled": true,
+      "email": "analyst@globex.example",
+      "emailVerified": true,
+      "firstName": "Gabe",
+      "lastName": "Globex",
+      "attributes": { "tenant": ["globex"] },
+      "credentials": [
+        { "type": "password", "value": "globex-pass", "temporary": false }
+      ],
+      "realmRoles": ["tier3_analyst"]
+    }
+  ]
+}

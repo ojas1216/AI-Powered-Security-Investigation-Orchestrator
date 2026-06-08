@@ -60,5 +60,9 @@ class MockSandbox(SandboxConnector):
 def build_sandbox() -> SandboxConnector:
     if settings.use_mock_connectors:
         return MockSandbox()
-    # Live connectors (JoeSandbox/Falcon/CAPE/AnyRun) register here.
+    if settings.cape_url and settings.cape_token:
+        from app.engines.sandbox.cape import CAPESandbox
+
+        return CAPESandbox()
+    # Other live sandboxes (JoeSandbox/Falcon/AnyRun) register here.
     return MockSandbox()

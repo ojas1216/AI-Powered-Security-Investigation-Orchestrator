@@ -19,8 +19,13 @@ services:
     environment:
       AEGIS_ENV: local
       AEGIS_CONNECTOR_MODE: mock
-      AEGIS_AUTH_DEV_BYPASS: "true"
       AEGIS_PERSISTENCE: postgres
+      # Real OIDC — the dev bypass is OFF in the compose stack. Tokens are minted by
+      # Keycloak; the issuer is the user-facing localhost URL while JWKS is fetched
+      # over the internal docker network.
+      AEGIS_OIDC_ISSUER: http://localhost:8080/realms/aegisflow
+      AEGIS_OIDC_AUDIENCE: aegisflow-api
+      AEGIS_OIDC_JWKS_URL: http://keycloak:8080/realms/aegisflow/protocol/openid-connect/certs
       # Connects as the least-privilege role so RLS is enforced (NOT 'aegis').
       AEGIS_DATABASE_URL: postgresql+psycopg://aegis_app:aegis_app@postgres:5432/aegis
       AEGIS_REDIS_URL: redis://redis:6379/0
@@ -31,6 +36,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      keycloak:
+        condition: service_started
       redis:
         condition: service_started
       neo4j:
@@ -38,6 +45,18 @@ services:
     read_only: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    volumes:
+      - "./infra/keycloak/realm-aegisflow.json:/opt/keycloak/data/import/realm-aegisflow.json:ro"
+    ports: ["8080:8080"]
 
   web:
     build: ./frontend

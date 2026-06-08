@@ -6,8 +6,8 @@ Legend: ✅ implemented & tested · 🔌 interface + runnable mock (swap creds f
 |---|---------------------------------|--------|------------------------------------------------------|
 | 1 | Alert Ingestion Engine          | ✅/🔌  | Webhook+API done; Splunk/Sentinel/Elastic normalizers ✅; Kafka/syslog 🔌 |
 | 2 | IOC Extraction Engine           | ✅     | Full, RFC + defang aware, unit-tested                |
-| 3 | Threat-Intel Correlation        | ✅/🔌  | Aggregator + verdict fusion ✅; VT/AbuseIPDB/GreyNoise/OTX live connectors + respx tests ✅; OpenCTI/MISP 🔌 |
-| 4 | Sandbox Automation              | 🔌     | Base + mock detonation; Joe/Falcon/CAPE/Any.Run 🔌   |
+| 3 | Threat-Intel Correlation        | ✅     | Aggregator + verdict fusion; VT/AbuseIPDB/GreyNoise/OTX/OpenCTI/MISP live connectors + respx tests ✅ |
+| 4 | Sandbox Automation              | ✅/🔌  | Base + mock + CAPEv2 live connector (submit/poll/report) + respx tests ✅; Joe/Falcon/Any.Run 🔌 |
 | 5 | EDR Investigation               | 🔌     | Base + mock telemetry; CRWD/S1/Defender/Wazuh 🔌     |
 | 6 | Email Investigation             | 🔌     | Base + mock; M365/Workspace/Mimecast/Proofpoint 🔌   |
 | 7 | Evidence Collection             | ✅     | Immutable, content-hashed store                      |
@@ -19,7 +19,9 @@ Legend: ✅ implemented & tested · 🔌 interface + runnable mock (swap creds f
 | 13| Playbook Recommendation         | ✅     | MITRE-driven rule engine                             |
 | 14| Multi-Tenant Architecture       | ✅     | TenantContext + Postgres RLS (verified) + ABAC       |
 
-Auth (OIDC/JWT) ✅ · RBAC+ABAC ✅ · Config/logging/OTel ✅ · CI/CD security ✅ · Docker/K8s/TF 🧱→🔌
+Auth (OIDC/JWT via Keycloak, verified end-to-end) ✅ · RBAC+ABAC ✅ · Config/logging/OTel ✅ · CI/CD security ✅ · Docker/K8s/TF 🧱→🔌
+
+See [AUTH.md](AUTH.md) for the Keycloak realm, demo users, and the verified auth matrix.
 
 **Persistence:** `AEGIS_PERSISTENCE=memory` (default, self-contained) or `postgres`
 (SQLAlchemy + Row-Level Security). RLS tenant isolation is verified at the database
