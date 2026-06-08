@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Loader2, Sparkles } from "lucide-react";
 import { useInvestigations } from "@/hooks/useInvestigations";
 import { extractAndEnrich } from "@/services/iocs";
@@ -16,10 +17,37 @@ const SOURCES = ["VirusTotal", "AbuseIPDB", "GreyNoise", "OpenCTI", "MISP", "OTX
 export function ThreatIntelPage() {
   const { data, isLoading } = useInvestigations();
   const audit = useAudit();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [text, setText] = useState("");
   const [results, setResults] = useState<EnrichedIOC[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Deep-link / global-search lookup: /threat-intel?q=<ioc> prefills and auto-runs.
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q) return;
+    setText(q);
+    void runOn(q);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function runOn(value: string) {
+    const payload = value.trim();
+    if (!payload) return;
+    setBusy(true);
+    setError("");
+    try {
+      const r = await extractAndEnrich(payload, true);
+      setResults(r);
+      audit("ioc.extract", `${r.length} indicators`);
+    } catch {
+      setError("Extraction failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const aggregated = useMemo(() => {
     const map = new Map<string, EnrichedIOC>();
@@ -32,20 +60,6 @@ export function ThreatIntelPage() {
     }
     return [...map.values()].sort((a, b) => b.confidence - a.confidence);
   }, [data]);
-
-  async function run() {
-    setBusy(true);
-    setError("");
-    try {
-      const r = await extractAndEnrich(text, true);
-      setResults(r);
-      audit("ioc.extract", `${r.length} indicators`);
-    } catch {
-      setError("Extraction failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div>
@@ -72,7 +86,7 @@ export function ThreatIntelPage() {
             placeholder="Paste an email, log line, or alert text to extract & enrich IOCs (defanged input supported, e.g. hxxps://evil[.]com)…"
           />
           <div className="flex items-center gap-2">
-            <Button size="sm" disabled={busy || !text.trim()} onClick={run}>
+            <Button size="sm" disabled={busy || !text.trim()} onClick={() => runOn(text)}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Extract & Enrich
             </Button>
