@@ -1,0 +1,23 @@
+# Enforce strict mutual TLS for all service-to-service traffic in the namespace.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: aegisflow
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: api-authz
+  namespace: aegisflow
+spec:
+  selector:
+    matchLabels: { app: aegis-api }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-ingress/sa/istio-ingress"]

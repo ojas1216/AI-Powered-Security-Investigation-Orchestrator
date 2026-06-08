@@ -1,0 +1,37 @@
+# Default-deny ingress/egress; only explicitly allowed flows pass.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: aegisflow
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-allow
+  namespace: aegisflow
+spec:
+  podSelector:
+    matchLabels: { app: aegis-api }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { app.kubernetes.io/name: istio-ingress }
+      ports: [{ port: 8000 }]
+  egress:
+    # Datastores in-namespace.
+    - to: [{ podSelector: { matchLabels: { app: postgres } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app: redis } } }]
+      ports: [{ port: 6379 }]
+    - to: [{ podSelector: { matchLabels: { app: neo4j } } }]
+      ports: [{ port: 7687 }]
+    # DNS.
+    - to: [{ namespaceSelector: {} }]
+      ports: [{ port: 53, protocol: UDP }]
+    # Egress to vendor TI APIs is restricted to 443 (SSRF allow-list enforced in app).
+    - ports: [{ port: 443, protocol: TCP }]

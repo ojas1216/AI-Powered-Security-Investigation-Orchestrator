@@ -1,0 +1,78 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly
+
+# CI fails on CRITICAL findings (supply-chain gate).
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  sast:
+    name: SAST (Semgrep + Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/python
+            p/secrets
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - name: Bandit
+        run: pip install bandit && bandit -r backend/app -ll
+
+  secrets:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deps_and_image:
+    name: Dependency + container scan (Trivy/Grype) + SBOM (Syft)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem (fail on CRITICAL)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Generate SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          path: ./backend
+          format: spdx-json
+          output-file: sbom.backend.json
+      - name: Grype scan of SBOM
+        uses: anchore/scan-action@v4
+        with:
+          sbom: sbom.backend.json
+          severity-cutoff: critical
+          fail-build: true
+
+  iac:
+    name: IaC scan (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra
+          soft_fail: false
+          framework: kubernetes,terraform,dockerfile

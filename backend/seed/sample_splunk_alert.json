@@ -1,0 +1,14 @@
+{
+  "source": "splunk",
+  "sid": "scheduler__admin__search__RMD5abc_at_1700000000",
+  "result": {
+    "event_id": "ES-9931",
+    "search_name": "Endpoint - Malicious PowerShell Execution",
+    "description": "Encoded PowerShell observed contacting malware-c2.net from 45.155.205.99",
+    "urgency": "critical",
+    "src_ip": "45.155.205.99",
+    "user": "jdoe",
+    "dvc": "WS-FIN-042",
+    "process": "powershell.exe -enc aQB3AHIA"
+  }
+}

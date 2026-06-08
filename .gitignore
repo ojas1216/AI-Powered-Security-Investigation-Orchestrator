@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Env / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+vault-token
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Data / artifacts
+*.sqlite3
+*.db
+chroma/
+neo4j-data/
+postgres-data/
+evidence-store/
+*.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+
+# SBOM / scan output
+sbom.*.json
+trivy-report.*
+semgrep.sarif

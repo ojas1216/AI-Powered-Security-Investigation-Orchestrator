@@ -1,0 +1,16 @@
+{
+  "source": "sentinel",
+  "properties": {
+    "incidentNumber": "INC-204815",
+    "title": "Phishing email reported by user — suspicious invoice link",
+    "description": "User reported a phishing email. Body contains hxxps://evil[.]com/pay and an attachment Invoice_8841.lnk. Sender billing@evil.com. PowerShell spawned after click on WS-FIN-042.",
+    "severity": "high",
+    "entities": [
+      { "kind": "Account", "accountName": "jdoe" },
+      { "kind": "Host", "hostName": "WS-FIN-042" },
+      { "kind": "Ip", "address": "45.155.205.99" }
+    ],
+    "alertProductNames": ["Microsoft Defender for Office 365"]
+  },
+  "message_id": "AAMkAraw-phish-0001"
+}

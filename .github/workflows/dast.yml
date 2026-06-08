@@ -1,0 +1,25 @@
+name: DAST
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 2"
+
+jobs:
+  zap:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start API (mock mode)
+        run: |
+          cd backend
+          pip install -e .
+          AEGIS_ENV=local AEGIS_CONNECTOR_MODE=mock AEGIS_AUTH_DEV_BYPASS=true \
+            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 8
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "http://localhost:8000"
+          fail_action: false
