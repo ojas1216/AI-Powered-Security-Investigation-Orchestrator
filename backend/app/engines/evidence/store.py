@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.schemas.investigation import Evidence
 
@@ -28,7 +28,7 @@ class EvidenceStore:
             label=label,
             sha256=digest,
             uri=f"evidence://{key}",
-            collected_at=datetime.now(timezone.utc),
+            collected_at=datetime.now(UTC),
         )
 
     def put_json(self, tenant: str, kind: str, label: str, obj: object) -> Evidence:

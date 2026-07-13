@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://aegis_app:aegis_app@localhost:5432/aegis"
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
-    neo4j_password: str = "aegis-neo4j"
+    neo4j_password: str = "aegis-neo4j"  # noqa: S105 - local-dev default; prod injects via Vault/env
     redis_url: str = "redis://localhost:6379/0"
     kafka_bootstrap: str = "localhost:9092"
     temporal_host: str = "localhost:7233"

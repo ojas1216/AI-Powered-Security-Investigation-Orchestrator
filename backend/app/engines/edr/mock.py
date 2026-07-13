@@ -2,11 +2,10 @@
 risk engine and affected-host logic have realistic input offline."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.engines.edr.base import EDRConnector, EDRHit
-from app.schemas.common import Verdict
 from app.schemas.ioc import IOC
 
 _CONFIRMED_VALUES = {
@@ -32,7 +31,7 @@ class MockEDR(EDRConnector):
                         host="WS-FIN-042",
                         user="jdoe",
                         process="powershell.exe",
-                        observed_at=datetime.now(timezone.utc),
+                        observed_at=datetime.now(UTC),
                         detail=f"IOC {ioc.value} observed in process execution",
                     )
                 )

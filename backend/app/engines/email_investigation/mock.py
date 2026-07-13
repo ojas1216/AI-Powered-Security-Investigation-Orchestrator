@@ -1,7 +1,7 @@
 """Mock email connector providing a realistic phishing message + recipient blast."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.engines.email_investigation.base import (
@@ -20,7 +20,7 @@ class MockEmail(EmailConnector):
             subject="Outstanding Invoice — Immediate Payment Required",
             sender="billing@evil.com",
             recipients=["jdoe@acme.example", "asmith@acme.example"],
-            received_at=datetime(2026, 6, 8, 8, 11, tzinfo=timezone.utc),
+            received_at=datetime(2026, 6, 8, 8, 11, tzinfo=UTC),
             body=(
                 "Please review the attached invoice and click "
                 "hxxps://evil[.]com/pay to settle immediately."

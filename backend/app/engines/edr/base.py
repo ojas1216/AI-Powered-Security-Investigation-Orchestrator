@@ -4,7 +4,7 @@ from __future__ import annotations
 import abc
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.schemas.ioc import IOC
 

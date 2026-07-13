@@ -1,7 +1,7 @@
 """The common normalized Alert schema — every source maps into this."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,7 +23,7 @@ class Alert(BaseModel):
     title: str = Field(max_length=512)
     description: str = Field(default="", max_length=8192)
     severity: Severity = Severity.MEDIUM
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Entities the source already extracted (we still re-extract from raw text).
     src_ips: list[str] = Field(default_factory=list)

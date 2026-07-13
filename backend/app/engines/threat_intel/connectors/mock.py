@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import hashlib
 
-from app.schemas.common import IOCType, Verdict
 from app.engines.threat_intel.base import ThreatIntelConnector
+from app.schemas.common import IOCType, Verdict
 from app.schemas.ioc import IOC, SourceVerdict
 
 _KNOWN_BAD = {

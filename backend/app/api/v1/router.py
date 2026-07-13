@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.routes import (
     alerts,
+    approvals,
     copilot,
     detections,
     health,
@@ -20,3 +21,4 @@ api_router.include_router(iocs.router, prefix="/iocs", tags=["iocs"])
 api_router.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
 api_router.include_router(detections.router, prefix="/detections", tags=["detections"])
 api_router.include_router(hunts.router, prefix="/hunts", tags=["hunts"])
+api_router.include_router(approvals.router, prefix="/approvals", tags=["approvals"])

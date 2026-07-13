@@ -1,7 +1,7 @@
 """Investigation package: the analyst-facing output."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -29,7 +29,7 @@ class Evidence(BaseModel):
     label: str
     sha256: str  # content hash → tamper evidence
     uri: str  # location in evidence store
-    collected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    collected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class RiskBreakdown(BaseModel):
@@ -78,7 +78,7 @@ class AgentTraceStep(BaseModel):
     outcome: str = ""
     ok: bool = True
     duration_ms: float = 0.0
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class RelatedCase(BaseModel):
@@ -108,10 +108,12 @@ class InvestigationPackage(BaseModel):
     affected_hosts: list[str] = Field(default_factory=list)
     affected_users: list[str] = Field(default_factory=list)
     playbook: list[PlaybookStep] = Field(default_factory=list)
+    # Approval requests raised for playbook steps (fetch via /approvals API).
+    approval_ids: list[str] = Field(default_factory=list)
     tickets: list[TicketRef] = Field(default_factory=list)
     executive_summary: str = ""
     analyst_report: str = ""
     agent_trace: list[AgentTraceStep] = Field(default_factory=list)
     related_investigations: list[RelatedCase] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

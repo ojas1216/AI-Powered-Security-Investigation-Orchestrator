@@ -12,7 +12,7 @@ class ProcessNode(BaseModel):
     pid: int
     name: str
     cmdline: str = ""
-    children: list["ProcessNode"] = Field(default_factory=list)
+    children: list[ProcessNode] = Field(default_factory=list)
 
 
 class SandboxReport(BaseModel):

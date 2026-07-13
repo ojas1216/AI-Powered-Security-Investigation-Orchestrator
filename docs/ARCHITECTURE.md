@@ -82,6 +82,24 @@ In local/dev the orchestrator runs in-process (`run_investigation`). In producti
 same engine calls are wrapped as Temporal **activities** so each step is retried,
 timed-out, and durably checkpointed (`orchestrator/temporal_workflow.py`).
 
+### Human approval workflow
+
+Recommendations are never auto-executed. When an investigation completes with an
+actionable verdict, every playbook step that `requires_approval` becomes an
+`ApprovalRequest` (`engines/approvals/`) with a strict, audited state machine:
+
+```
+PENDING ──approve──▶ APPROVED ──mark executed──▶ EXECUTED
+   │──reject──▶ REJECTED          │──(72h TTL)──▶ EXPIRED
+```
+
+- **Four-eyes**: the requester can never decide their own request.
+- **RBAC**: deciding/executing requires `investigation:act` (tier3 / incident
+  responder); reading requires `investigation:read`.
+- **Audit**: every transition logs actor, tenant, request id and note.
+- API: `GET /api/v1/approvals`, `POST /api/v1/approvals/{id}/decision`,
+  `POST /api/v1/approvals/{id}/executed`. The package carries `approval_ids`.
+
 ### Detection engineering & threat hunting
 
 - **Rule DSL** (`engines/detection/`): strictly-typed, Sigma-inspired conditions

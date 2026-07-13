@@ -28,6 +28,7 @@ from app.agents.planner import Budget, PlannedAction, Planner
 from app.agents.state import InvestigationState
 from app.agents.tools import Toolbox
 from app.core.logging import get_logger
+from app.engines.approvals import ApprovalService, build_approval_service
 from app.engines.graph.client import GraphClient, GraphTriple
 from app.engines.mitre import map_techniques
 from app.engines.playbook import recommend_playbook
@@ -44,12 +45,14 @@ log = get_logger("agents.loop")
 
 class AutonomousInvestigator:
     def __init__(self, *, toolbox: Toolbox, graph: GraphClient, memory: CaseMemory,
-                 planner: Planner | None = None, budget: Budget | None = None) -> None:
+                 planner: Planner | None = None, budget: Budget | None = None,
+                 approvals: ApprovalService | None = None) -> None:
         self.toolbox = toolbox
         self.graph = graph
         self.memory = memory
         self.planner = planner or Planner()
         self.budget = budget or Budget()
+        self.approvals = approvals or build_approval_service()
 
     async def investigate(self, tenant: str, alert: Alert) -> InvestigationPackage:
         inv_id = str(uuid.uuid4())
@@ -186,6 +189,13 @@ class AutonomousInvestigator:
 
         pkg.playbook = recommend_playbook(pkg.mitre, pkg.overall_verdict)
         if pkg.overall_verdict in (Verdict.MALICIOUS, Verdict.SUSPICIOUS):
+            requests = self.approvals.create_for_package(pkg)
+            pkg.approval_ids = [r.approval_id for r in requests]
+            if requests:
+                note("request_approvals",
+                     "Containment actions require human approval (never "
+                     "auto-executed)",
+                     f"{len(requests)} approval request(s) pending")
             try:
                 ticket = await self.toolbox.ticketing.create_ticket(pkg)
                 pkg.tickets = [ticket]

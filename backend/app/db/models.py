@@ -29,7 +29,7 @@ class InvestigationRecord(Base, TenantMixin, TimestampMixin):
     risk_score: Mapped[float] = mapped_column(Float, default=0.0)
     package: Mapped[dict] = mapped_column(JSON, default=dict)
 
-    iocs: Mapped[list["IOCRecord"]] = relationship(
+    iocs: Mapped[list[IOCRecord]] = relationship(
         back_populates="investigation", cascade="all, delete-orphan"
     )
 

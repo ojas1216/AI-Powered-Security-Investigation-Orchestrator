@@ -12,7 +12,9 @@ class MockTicketing(TicketingConnector):
     name = "mock-ticketing"
 
     async def create_ticket(self, package: InvestigationPackage) -> TicketRef:
-        short = hashlib.sha1(package.investigation_id.encode()).hexdigest()[:6].upper()
+        digest = hashlib.sha1(package.investigation_id.encode(),
+                             usedforsecurity=False).hexdigest()
+        short = digest[:6].upper()
         return TicketRef(
             system="mock", ticket_id=f"SEC-{short}",
             url=f"https://tickets.local/SEC-{short}",
