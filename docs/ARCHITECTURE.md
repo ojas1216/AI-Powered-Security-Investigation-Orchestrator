@@ -22,6 +22,12 @@ backend/app
 ├── schemas/         Pydantic v2 contracts (Alert, IOC, Investigation, ...)
 ├── db/              SQLAlchemy 2.x models, session, RLS helpers
 ├── ingestion/       SIEM normalizers → common Alert schema
+├── agents/          autonomous investigation core:
+│   ├── planner.py       dynamic, deterministic action planner (budgeted)
+│   ├── loop.py          plan → act → observe → re-plan → finalize
+│   ├── tools.py         typed tool registry wrapping every engine
+│   ├── memory.py        long-term case memory (tenant-isolated recall)
+│   └── state.py         working memory of one investigation
 ├── engines/
 │   ├── ioc_extraction/    deterministic IOC parser (defang-aware, validated)
 │   ├── threat_intel/      connector base + aggregator (verdict fusion)
@@ -49,6 +55,26 @@ ingest(alert) ─▶ normalize ─▶ persist(Investigation: status=RUNNING)
   ─▶ open ticket(s)                              [ServiceNow / Jira]
   ─▶ persist(Investigation: status=COMPLETE, package=...)
 ```
+
+The lifecycle above is not a hardcoded pipeline: it is what the **autonomous agent
+loop** (`app/agents/`) converges to on a typical phishing alert. The planner re-plans
+after every batch of tool executions, so evidence discovered mid-investigation changes
+what happens next — e.g. IOCs dropped by a sandbox detonation are enriched and hunted in
+EDR in later iterations, exactly like an analyst pivoting. Properties:
+
+- **Deterministic control flow.** Action selection is rule-driven and auditable; LLM
+  judgement is confined to the narrative (copilot) layer. Prompt injection in evidence
+  can never steer which tools run.
+- **Budgeted.** Hard caps on iterations, tool calls and wall-clock time bound worst-case
+  cost per investigation.
+- **Explainable.** Every plan decision, tool execution (with duration and outcome) and
+  finalization step is recorded as an `AgentTraceStep` in the package — a complete
+  audit trail of *why* the agent did what it did.
+- **Resilient.** A failing connector is recorded in the trace and the investigation
+  completes on partial evidence.
+- **Long-term memory.** Completed cases are remembered (IOC keys + techniques); new
+  investigations recall tenant-scoped similar past cases (`related_investigations`)
+  with the shared indicators shown, so recurring campaigns surface instantly.
 
 In local/dev the orchestrator runs in-process (`run_investigation`). In production the
 same engine calls are wrapped as Temporal **activities** so each step is retried,

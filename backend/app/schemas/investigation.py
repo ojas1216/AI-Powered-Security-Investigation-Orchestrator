@@ -52,6 +52,36 @@ class TicketRef(BaseModel):
     url: str | None = None
 
 
+class AgentTraceStep(BaseModel):
+    """One explainable step of the autonomous investigation loop.
+
+    The full trace answers: what did the agent do, in what order, *why*, and
+    what did each action observe — the audit trail regulators and analysts ask for.
+    """
+
+    step: int
+    iteration: int
+    phase: str  # plan | act | observe | finalize
+    action: str
+    reason: str
+    outcome: str = ""
+    ok: bool = True
+    duration_ms: float = 0.0
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class RelatedCase(BaseModel):
+    """A past investigation recalled from long-term memory as similar to this one."""
+
+    investigation_id: str
+    title: str
+    verdict: Verdict
+    risk_score: float = 0.0
+    similarity: float = Field(ge=0.0, le=1.0)
+    shared_iocs: list[str] = Field(default_factory=list)
+    shared_techniques: list[str] = Field(default_factory=list)
+
+
 class InvestigationPackage(BaseModel):
     investigation_id: str
     tenant: str
@@ -69,5 +99,7 @@ class InvestigationPackage(BaseModel):
     tickets: list[TicketRef] = Field(default_factory=list)
     executive_summary: str = ""
     analyst_report: str = ""
+    agent_trace: list[AgentTraceStep] = Field(default_factory=list)
+    related_investigations: list[RelatedCase] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
