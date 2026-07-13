@@ -82,6 +82,31 @@ In local/dev the orchestrator runs in-process (`run_investigation`). In producti
 same engine calls are wrapped as Temporal **activities** so each step is retried,
 timed-out, and durably checkpointed (`orchestrator/temporal_workflow.py`).
 
+### Durability, streaming & scale path
+
+- **Per-tool Temporal activities**: `InvestigationState` JSON-round-trips, so the
+  durable workflow checkpoints after every tool call — a worker crash resumes from
+  the last completed activity. The deterministic planner runs inside the workflow
+  (replay-safe by construction).
+- **Dispatch** (`orchestrator/dispatch.py`): `AEGIS_DISPATCH=inline` runs supervised,
+  semaphore-bounded asyncio tasks (429 at capacity); `temporal` starts the durable
+  workflow. Both persist a QUEUED placeholder up front and a FAILED package on crash.
+- **Async ingestion**: `POST /alerts/ingest?mode=async` → 202 + id; poll
+  `GET /investigations/{id}`.
+- **Kafka** (`ingestion/kafka_consumer.py`): at-least-once (commit after dispatch),
+  poison messages to a DLQ with the error in a header, dispatcher backpressure.
+- **Durable stores** (`AEGIS_PERSISTENCE=postgres`): case memory, approvals and
+  tenant detection rules persist to RLS-protected tables (alembic 0002).
+
+### AI model routing
+
+`engines/copilot/router.py` routes each generation: task tiers (`fast` for exec
+summaries → e.g. Haiku, `deep` for analyst reports → e.g. Sonnet), a
+preference-ordered provider chain (`anthropic` cloud / `ollama` local &
+air-gapped), a per-provider circuit breaker, and a deterministic grounded
+fallback so the pipeline never blocks on an LLM. Prompt fencing and output
+validation stay in `guards.py` regardless of provider.
+
 ### Human approval workflow
 
 Recommendations are never auto-executed. When an investigation completes with an

@@ -100,9 +100,16 @@ class Settings(BaseSettings):
     cape_url: str = ""  # e.g. https://cape.internal
     cape_token: str = ""
 
-    # ── AI copilot ────────────────────────────────────────────────────────────
+    # ── AI copilot / model routing ────────────────────────────────────────────
+    # Preference-ordered provider chain; first configured+healthy provider wins.
+    llm_provider_order: str = "anthropic,ollama"
+    llm_timeout_seconds: float = 60.0
+    anthropic_api_key: str = ""
+    anthropic_model_fast: str = "claude-haiku-4-5-20251001"  # exec summaries
+    anthropic_model_deep: str = "claude-sonnet-5"  # analyst reports
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
+    ollama_model_fast: str = ""  # optional smaller local model for fast tier
 
     # ── Ticketing ─────────────────────────────────────────────────────────────
     servicenow_instance: str = ""

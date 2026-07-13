@@ -1,58 +1,57 @@
 """SOC copilot client.
 
-Talks to a self-hosted Ollama instance. When connectors are in mock mode (or
-Ollama is unreachable) it falls back to a deterministic template generator so the
+Generations are routed through the ModelRouter (Anthropic for cloud, Ollama for
+local/air-gapped; see router.py). When connectors are in mock mode, or every
+provider fails, it falls back to a deterministic template generator so the
 investigation package always has a readable summary and the pipeline/tests are
 hermetic. All untrusted context is fenced; all output is validated.
 """
 from __future__ import annotations
 
-import httpx
-
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.engines.copilot import prompts
 from app.engines.copilot.guards import validate_output, wrap_untrusted
+from app.engines.copilot.router import ModelRouter, ProviderError, TaskTier
 from app.schemas.investigation import InvestigationPackage
 
 log = get_logger("copilot")
 
 
 class Copilot:
-    def __init__(self, use_llm: bool) -> None:
+    def __init__(self, use_llm: bool, router: ModelRouter | None = None) -> None:
         self._use_llm = use_llm
+        self._router = router or (ModelRouter() if use_llm else None)
 
-    async def _generate(self, instruction: str, context: str, fallback: str) -> str:
-        if not self._use_llm:
+    async def _generate(self, instruction: str, context: str, fallback: str,
+                        tier: TaskTier) -> str:
+        if not self._use_llm or self._router is None:
             return validate_output(fallback)
         try:
-            payload = {
-                "model": settings.ollama_model,
-                "system": prompts.SYSTEM_PROMPT,
-                "prompt": f"{instruction}\n\n{wrap_untrusted('investigation', context)}",
-                "stream": False,
-                "options": {"temperature": 0.2},
-            }
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    f"{settings.ollama_base_url}/api/generate", json=payload
-                )
-                resp.raise_for_status()
-                return validate_output(resp.json().get("response", "").strip())
-        except httpx.HTTPError as exc:  # pragma: no cover - network
-            log.warning("ollama_unavailable_fallback_template", error=str(exc))
+            text, provider = await self._router.generate(
+                tier=tier,
+                system=prompts.SYSTEM_PROMPT,
+                prompt=f"{instruction}\n\n{wrap_untrusted('investigation', context)}",
+                temperature=0.2,
+            )
+            log.info("copilot_generated", provider=provider, tier=tier.value)
+            return validate_output(text)
+        except ProviderError as exc:
+            log.warning("all_llm_providers_failed_fallback_template", error=str(exc))
             return validate_output(fallback)
 
     async def executive_summary(self, package: InvestigationPackage) -> str:
         ctx = self._summarize_facts(package)
         return await self._generate(
-            prompts.EXEC_SUMMARY_INSTRUCTION, ctx, self._exec_narrative(package)
+            prompts.EXEC_SUMMARY_INSTRUCTION, ctx, self._exec_narrative(package),
+            TaskTier.FAST,
         )
 
     async def analyst_report(self, package: InvestigationPackage) -> str:
         ctx = self._summarize_facts(package)
         return await self._generate(
-            prompts.ANALYST_REPORT_INSTRUCTION, ctx, self._analyst_narrative(package)
+            prompts.ANALYST_REPORT_INSTRUCTION, ctx, self._analyst_narrative(package),
+            TaskTier.DEEP,
         )
 
     @staticmethod
