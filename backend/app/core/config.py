@@ -64,7 +64,15 @@ class Settings(BaseSettings):
     neo4j_password: str = "aegis-neo4j"  # noqa: S105 - local-dev default; prod injects via Vault/env
     redis_url: str = "redis://localhost:6379/0"
     kafka_bootstrap: str = "localhost:9092"
+    kafka_alerts_topic: str = "aegis.alerts"
+    kafka_dlq_topic: str = "aegis.alerts.dlq"
+    kafka_group_id: str = "aegisflow-ingest"
     temporal_host: str = "localhost:7233"
+
+    # ── Investigation dispatch ────────────────────────────────────────────
+    # inline: supervised asyncio task in-process; temporal: durable workflow.
+    dispatch: str = "inline"
+    max_concurrent_investigations: int = 100
 
     # ── OIDC / Keycloak ───────────────────────────────────────────────────────
     oidc_issuer: str = "http://localhost:8080/realms/aegisflow"

@@ -54,8 +54,9 @@ class AutonomousInvestigator:
         self.budget = budget or Budget()
         self.approvals = approvals or build_approval_service()
 
-    async def investigate(self, tenant: str, alert: Alert) -> InvestigationPackage:
-        inv_id = str(uuid.uuid4())
+    async def investigate(self, tenant: str, alert: Alert,
+                          investigation_id: str | None = None) -> InvestigationPackage:
+        inv_id = investigation_id or str(uuid.uuid4())
         log.info("investigation_start", investigation_id=inv_id, tenant=tenant,
                  alert=alert.source_alert_id)
         pkg = InvestigationPackage(

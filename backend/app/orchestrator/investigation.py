@@ -39,15 +39,18 @@ class InvestigationOrchestrator:
             memory=build_case_memory(),
         )
 
-    async def investigate(self, tenant: str, alert: Alert) -> InvestigationPackage:
-        return await self.agent.investigate(tenant, alert)
+    async def investigate(self, tenant: str, alert: Alert,
+                          investigation_id: str | None = None) -> InvestigationPackage:
+        return await self.agent.investigate(tenant, alert, investigation_id)
 
 
 _orchestrator: InvestigationOrchestrator | None = None
 
 
-async def run_investigation(tenant: str, alert: Alert) -> InvestigationPackage:
+async def run_investigation(tenant: str, alert: Alert,
+                            investigation_id: str | None = None,
+                            ) -> InvestigationPackage:
     global _orchestrator
     if _orchestrator is None:
         _orchestrator = InvestigationOrchestrator()
-    return await _orchestrator.investigate(tenant, alert)
+    return await _orchestrator.investigate(tenant, alert, investigation_id)
