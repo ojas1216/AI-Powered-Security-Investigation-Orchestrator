@@ -108,6 +108,56 @@ export interface TicketRef {
   url?: string | null;
 }
 
+export interface DetectionMatch {
+  rule_id: string;
+  title: string;
+  severity: Severity;
+  techniques: MitreTechnique[];
+  matched_fields: Record<string, string>;
+  tags: string[];
+}
+
+export interface AgentTraceStep {
+  step: number;
+  iteration: number;
+  phase: "plan" | "act" | "observe" | "finalize";
+  action: string;
+  reason: string;
+  outcome: string;
+  ok: boolean;
+  duration_ms: number;
+  started_at: string;
+}
+
+export interface RelatedCase {
+  investigation_id: string;
+  title: string;
+  verdict: Verdict;
+  risk_score: number;
+  similarity: number;
+  shared_iocs: string[];
+  shared_techniques: string[];
+}
+
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "executed" | "expired";
+
+export interface ApprovalRequest {
+  approval_id: string;
+  tenant: string;
+  investigation_id: string;
+  step: PlaybookStep;
+  status: ApprovalStatus;
+  requested_by: string;
+  requested_at: string;
+  expires_at: string;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  decision_note?: string | null;
+  executed_by?: string | null;
+  executed_at?: string | null;
+  execution_note?: string | null;
+}
+
 export interface InvestigationPackage {
   investigation_id: string;
   tenant: string;
@@ -122,9 +172,13 @@ export interface InvestigationPackage {
   affected_hosts: string[];
   affected_users: string[];
   playbook: PlaybookStep[];
+  approval_ids: string[];
   tickets: TicketRef[];
   executive_summary: string;
   analyst_report: string;
+  detections: DetectionMatch[];
+  agent_trace: AgentTraceStep[];
+  related_investigations: RelatedCase[];
   created_at: string;
   completed_at?: string | null;
 }

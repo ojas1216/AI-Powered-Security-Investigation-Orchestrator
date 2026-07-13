@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   BellRing,
+  ClipboardCheck,
   Microscope,
   FolderKanban,
   ShieldAlert,
@@ -34,6 +35,7 @@ export const NAV: NavItem[] = [
   { to: "/timeline", label: "Timeline", icon: Clock },
   { to: "/graph", label: "Attack Graph", icon: Share2 },
   { to: "/mitre", label: "MITRE ATT&CK", icon: Grid3x3 },
+  { to: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/copilot", label: "AI Copilot", icon: Bot },
   { to: "/admin", label: "Administration", icon: ShieldCheck, perm: "admin:*" },

@@ -22,6 +22,9 @@ export type Permission =
   | "copilot:query"
   | "ticket:create"
   | "audit:read"
+  | "detection:read"
+  | "detection:write"
+  | "hunt:run"
   | "admin:*";
 
 const ALL: Permission[] = [
@@ -33,6 +36,9 @@ const ALL: Permission[] = [
   "copilot:query",
   "ticket:create",
   "audit:read",
+  "detection:read",
+  "detection:write",
+  "hunt:run",
   "admin:*",
 ];
 
@@ -45,8 +51,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "copilot:query",
     "ticket:create",
     "audit:read",
+    "detection:read",
   ],
-  tier1_analyst: ["investigation:read", "ioc:read", "copilot:query"],
+  tier1_analyst: ["investigation:read", "ioc:read", "copilot:query", "detection:read"],
   tier2_analyst: [
     "alert:ingest",
     "investigation:read",
@@ -54,6 +61,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "ioc:read",
     "copilot:query",
     "ticket:create",
+    "detection:read",
+    "hunt:run",
   ],
   tier3_analyst: [
     "alert:ingest",
@@ -63,8 +72,19 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "ioc:read",
     "copilot:query",
     "ticket:create",
+    "detection:read",
+    "detection:write",
+    "hunt:run",
   ],
-  threat_hunter: ["investigation:read", "investigation:create", "ioc:read", "copilot:query"],
+  threat_hunter: [
+    "investigation:read",
+    "investigation:create",
+    "ioc:read",
+    "copilot:query",
+    "detection:read",
+    "detection:write",
+    "hunt:run",
+  ],
   incident_responder: [
     "investigation:read",
     "investigation:create",
@@ -72,8 +92,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "ioc:read",
     "copilot:query",
     "ticket:create",
+    "detection:read",
+    "hunt:run",
   ],
-  auditor: ["investigation:read", "audit:read"],
+  auditor: ["investigation:read", "audit:read", "detection:read"],
 };
 
 export function permissionsForRoles(roles: string[]): Set<Permission> {

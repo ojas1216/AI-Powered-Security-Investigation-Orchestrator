@@ -13,6 +13,7 @@ import { EvidenceVaultPage } from "@/pages/EvidenceVault";
 import { TimelinePage } from "@/pages/Timeline";
 import { AttackGraphPage } from "@/pages/AttackGraph";
 import { MitrePage } from "@/pages/Mitre";
+import { ApprovalsPage } from "@/pages/Approvals";
 import { ReportsPage } from "@/pages/Reports";
 import { CopilotPage } from "@/pages/Copilot";
 import { AdministrationPage } from "@/pages/Administration";
@@ -36,6 +37,7 @@ export function AppRoutes() {
           <Route path="/timeline" element={<TimelinePage />} />
           <Route path="/graph" element={<AttackGraphPage />} />
           <Route path="/mitre" element={<MitrePage />} />
+          <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/copilot" element={<CopilotPage />} />
           <Route

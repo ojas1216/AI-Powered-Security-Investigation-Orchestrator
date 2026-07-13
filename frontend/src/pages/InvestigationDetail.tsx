@@ -18,6 +18,9 @@ import { IocTable } from "@/components/investigation/IocTable";
 import { TimelineView } from "@/components/investigation/TimelineView";
 import { AttackGraph } from "@/components/graph/AttackGraph";
 import { MitreMatrix } from "@/components/mitre/MitreMatrix";
+import { AgentTrace } from "@/components/investigation/AgentTrace";
+import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
+import { RelatedCases } from "@/components/investigation/RelatedCases";
 import type { InvestigationPackage } from "@/types/api";
 
 export function InvestigationDetailPage() {
@@ -47,7 +50,7 @@ export function InvestigationDetailPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          {["overview", "timeline", "evidence", "threat-intel", "mitre", "graph", "notes", "reports"].map((t) => (
+          {["overview", "agent-trace", "detections", "timeline", "evidence", "threat-intel", "mitre", "graph", "notes", "reports"].map((t) => (
             <TabsTrigger key={t} value={t}>
               {t.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
             </TabsTrigger>
@@ -56,6 +59,19 @@ export function InvestigationDetailPage() {
 
         <TabsContent value="overview">
           <Overview pkg={pkg} />
+        </TabsContent>
+        <TabsContent value="agent-trace">
+          <Card>
+            <CardHeader>
+              <CardTitle>Agent Reasoning Trace ({pkg.agent_trace?.length ?? 0} steps)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AgentTrace steps={pkg.agent_trace ?? []} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="detections">
+          <DetectionsPanel detections={pkg.detections ?? []} />
         </TabsContent>
         <TabsContent value="timeline">
           <Card>
@@ -98,6 +114,11 @@ function Overview({ pkg }: { pkg: InvestigationPackage }) {
   const malicious = pkg.iocs.filter((e) => e.verdict === "malicious");
   return (
     <div className="grid gap-4 lg:grid-cols-3">
+      {(pkg.related_investigations?.length ?? 0) > 0 && (
+        <div className="lg:col-span-3">
+          <RelatedCases cases={pkg.related_investigations} />
+        </div>
+      )}
       <Card className="flex flex-col items-center justify-center gap-3 p-6">
         {pkg.risk ? <RiskMeter risk={pkg.risk} /> : <span className="text-fg-subtle">No risk score</span>}
         {pkg.risk && (
