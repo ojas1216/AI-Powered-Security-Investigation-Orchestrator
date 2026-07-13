@@ -107,10 +107,11 @@ class ThreatIntelAggregator:
 def build_aggregator() -> ThreatIntelAggregator:
     """Wire connectors based on configured mode.
 
-    In live mode only connectors that actually have a key configured are wired,
-    so a deployment with just a VirusTotal key works without erroring on the rest.
-    If no key is present at all we fall back to the mock so the platform never
-    silently produces empty enrichment.
+    Live mode works with **zero API keys**: the keyless public feeds (SANS ISC
+    DShield for IPs, CIRCL hashlookup for file hashes) are always wired unless
+    disabled via AEGIS_TI_ENABLE_PUBLIC_FEEDS=false. Key-based connectors join
+    the pool only when their (free-tier or paid) key is configured, so a
+    deployment with just a VirusTotal key works without erroring on the rest.
     """
     if settings.use_mock_connectors:
         from app.engines.threat_intel.connectors.mock import MockThreatIntelConnector
@@ -118,6 +119,10 @@ def build_aggregator() -> ThreatIntelAggregator:
         return ThreatIntelAggregator([MockThreatIntelConnector()])
 
     from app.engines.threat_intel.connectors.abuseipdb import AbuseIPDBConnector
+    from app.engines.threat_intel.connectors.circl_hashlookup import (
+        CIRCLHashlookupConnector,
+    )
+    from app.engines.threat_intel.connectors.dshield import DShieldConnector
     from app.engines.threat_intel.connectors.greynoise import GreyNoiseConnector
     from app.engines.threat_intel.connectors.misp import MISPConnector
     from app.engines.threat_intel.connectors.opencti import OpenCTIConnector
@@ -125,6 +130,9 @@ def build_aggregator() -> ThreatIntelAggregator:
     from app.engines.threat_intel.connectors.virustotal import VirusTotalConnector
 
     connectors: list[ThreatIntelConnector] = []
+    if settings.ti_enable_public_feeds:
+        connectors.append(DShieldConnector())
+        connectors.append(CIRCLHashlookupConnector())
     if settings.virustotal_api_key:
         connectors.append(VirusTotalConnector())
     if settings.abuseipdb_api_key:
@@ -141,7 +149,7 @@ def build_aggregator() -> ThreatIntelAggregator:
     if not connectors:
         from app.engines.threat_intel.connectors.mock import MockThreatIntelConnector
 
-        log.warning("live_mode_no_keys_configured_fallback_mock")
+        log.warning("live_mode_no_connectors_configured_fallback_mock")
         connectors.append(MockThreatIntelConnector())
 
     return ThreatIntelAggregator(connectors)

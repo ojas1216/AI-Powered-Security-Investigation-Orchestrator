@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     auth_dev_bypass: bool = False
 
     # ── Threat intel (live mode) ──────────────────────────────────────────────
+    # Keyless public feeds (SANS ISC DShield, CIRCL hashlookup) — free, no
+    # registration. Enabled by default so live mode works with zero API keys.
+    ti_enable_public_feeds: bool = True
     virustotal_api_key: str = ""
     abuseipdb_api_key: str = ""
     greynoise_api_key: str = ""

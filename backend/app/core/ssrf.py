@@ -20,6 +20,9 @@ ALLOWED_HOSTS: frozenset[str] = frozenset(
         "api.abuseipdb.com",
         "api.greynoise.io",
         "otx.alienvault.com",
+        # Keyless public feeds (no registration required)
+        "isc.sans.edu",
+        "hashlookup.circl.lu",
     }
 )
 
