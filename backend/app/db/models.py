@@ -95,3 +95,17 @@ class DetectionRuleRecord(Base, TenantMixin, TimestampMixin):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     rule_id: Mapped[str] = mapped_column(String(64), index=True)
     rule: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class UserAccountRecord(Base, TenantMixin, TimestampMixin):
+    """Native/Google user account. Looked up globally at sign-in (no RLS),
+    tenant-scoped everywhere else."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(256), default="")
+    roles: Mapped[list] = mapped_column(JSON, default=list)
+    provider: Mapped[str] = mapped_column(String(16), default="password")
+    password_hash: Mapped[str] = mapped_column(String(256), default="")

@@ -84,6 +84,15 @@ class Settings(BaseSettings):
     # startup check (main.py) refuses to boot with this enabled outside `local`.
     auth_dev_bypass: bool = False
 
+    # ── Native accounts + Google sign-in ──────────────────────────────────────
+    # Google OAuth client id (free: https://console.cloud.google.com/apis/credentials
+    # -> Create OAuth client ID -> Web application). Empty disables Google sign-in.
+    google_client_id: str = ""
+    allow_self_registration: bool = True
+    default_tenant: str = "acme"
+    default_user_role: str = "tier1_analyst"  # least privilege; admin promotes
+    session_ttl_hours: float = 8.0
+
     # ── Threat intel (live mode) ──────────────────────────────────────────────
     # Keyless public feeds (SANS ISC DShield, CIRCL hashlookup) — free, no
     # registration. Enabled by default so live mode works with zero API keys.

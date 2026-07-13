@@ -53,3 +53,41 @@ export async function refreshAccessToken(
     expiresIn: data.expires_in,
   };
 }
+
+// ── Native accounts + Google sign-in (AegisFlow /auth endpoints) ─────────────
+
+import { http } from "./http";
+
+export interface SessionResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  email: string;
+  display_name: string;
+  tenant: string;
+  roles: string[];
+}
+
+export async function registerUser(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<SessionResponse> {
+  const { data } = await http.post<SessionResponse>("/auth/register", {
+    email,
+    password,
+    display_name: displayName,
+  });
+  return data;
+}
+
+export async function loginNative(email: string, password: string): Promise<SessionResponse> {
+  const { data } = await http.post<SessionResponse>("/auth/login", { email, password });
+  return data;
+}
+
+/** Exchange a Google ID token (from the GIS button) for an AegisFlow session. */
+export async function loginWithGoogle(credential: string): Promise<SessionResponse> {
+  const { data } = await http.post<SessionResponse>("/auth/google", { credential });
+  return data;
+}

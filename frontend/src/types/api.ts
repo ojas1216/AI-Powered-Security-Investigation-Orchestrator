@@ -108,6 +108,15 @@ export interface TicketRef {
   url?: string | null;
 }
 
+export interface EDRHit {
+  ioc: IOC;
+  host: string;
+  user?: string | null;
+  process?: string | null;
+  observed_at: string;
+  detail: string;
+}
+
 export interface DetectionMatch {
   rule_id: string;
   title: string;

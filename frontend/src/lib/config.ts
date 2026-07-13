@@ -19,6 +19,10 @@ export const config = {
     clientId: env("VITE_OIDC_CLIENT_ID", "aegisflow-spa"),
   },
 
+  /** Google OAuth client id for the Sign in with Google button (free from
+   *  console.cloud.google.com). Empty hides the button. */
+  googleClientId: env("VITE_GOOGLE_CLIENT_ID", ""),
+
   /** Allow the header-based dev login (only works when the API runs with
    *  AEGIS_AUTH_DEV_BYPASS=true). Disabled automatically in production builds. */
   devLoginEnabled: env("VITE_DEV_LOGIN", import.meta.env.PROD ? "false" : "true") === "true",

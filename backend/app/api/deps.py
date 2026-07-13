@@ -23,10 +23,14 @@ async def get_principal(
     Dev bypass (local only) lets the platform run without a Keycloak instance by
     trusting headers — guarded so it can never be enabled outside `env=local`.
     """
-    if settings.auth_dev_bypass and settings.is_local:
-        # Even the local bypass requires a bearer to mirror real auth flow.
-        if not authorization or not authorization.lower().startswith("bearer "):
-            raise AuthError("Missing bearer token")
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise AuthError("Missing bearer token")
+    bearer = authorization.split(" ", 1)[1].strip()
+
+    # Dev bypass applies ONLY to the literal "dev" token (what the local UI's
+    # dev-login sends). Real JWTs always go through verification, so native
+    # accounts and Google sign-in behave identically in local mode.
+    if settings.auth_dev_bypass and settings.is_local and bearer == "dev":
         tenant = x_tenant_id or "demo"
         roles = (request.headers.get("X-Roles") or "tier3_analyst").split(",")
         principal = Principal(
@@ -37,9 +41,7 @@ async def get_principal(
         set_current_tenant(principal.tenant)
         return principal
 
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise AuthError("Missing bearer token")
-    claims = decode_token(authorization.split(" ", 1)[1].strip())
+    claims = decode_token(bearer)
     principal = principal_from_claims(claims, tenant_header=x_tenant_id)
     set_current_tenant(principal.tenant)
     await check_rate_limit(principal.tenant)

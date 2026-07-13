@@ -23,7 +23,7 @@ export function CommandPalette() {
     const list: Item[] = navMatches.map((nav) => ({ kind: "nav", nav }));
     // When the user typed something, offer an IOC/threat-intel lookup as the top action.
     if (q) {
-      list.unshift({ kind: "lookup", label: `Look up "${q}" in Threat Intelligence`, query: q });
+      list.unshift({ kind: "lookup", label: `Full IOC report for "${q}"`, query: q });
     }
     return list;
   }, [query]);
@@ -40,7 +40,7 @@ export function CommandPalette() {
   const choose = (item: Item) => {
     setOpen(false);
     if (item.kind === "lookup") {
-      navigate(`/threat-intel?q=${encodeURIComponent(item.query)}`);
+      navigate(`/ioc-report?q=${encodeURIComponent(item.query)}`);
     } else {
       navigate(item.nav.to);
     }

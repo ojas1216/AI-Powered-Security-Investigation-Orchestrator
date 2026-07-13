@@ -61,12 +61,38 @@ class _JwksCache:
 
 
 _jwks = _JwksCache(settings.oidc_jwks_url)
+_jwks_by_url: dict[str, _JwksCache] = {settings.oidc_jwks_url: _jwks}
+
+
+def fetch_signing_key(jwks_url: str, kid: str) -> dict:
+    """Cached JWKS lookup for any trusted issuer (Keycloak, Google)."""
+    cache = _jwks_by_url.get(jwks_url)
+    if cache is None:
+        cache = _jwks_by_url[jwks_url] = _JwksCache(jwks_url)
+    return cache.get(kid)
 
 
 def decode_token(token: str) -> dict:
-    """Verify and decode a bearer JWT. Raises AuthError on any failure."""
+    """Verify and decode a bearer JWT. Raises AuthError on any failure.
+
+    Two trusted token families:
+    - HS256 session tokens issued by our own /auth endpoints (native accounts
+      and Google sign-in) — verified with the service secret.
+    - RS256 access tokens issued by Keycloak — verified via its JWKS.
+    The algorithm is pinned per family: an HS256 token is never validated
+    against a public key (and vice versa), which forecloses alg-confusion.
+    """
     try:
         header = jwt.get_unverified_header(token)
+    except JWTError as exc:
+        raise AuthError("Invalid or expired token") from exc
+
+    if header.get("alg") == "HS256":
+        from app.core.accounts import decode_session_token
+
+        return decode_session_token(token)
+
+    try:
         key = _jwks.get(header["kid"])
         return jwt.decode(
             token,
