@@ -29,6 +29,8 @@ backend/app
 │   ├── memory.py        long-term case memory (tenant-isolated recall)
 │   └── state.py         working memory of one investigation
 ├── engines/
+│   ├── detection/         Sigma-inspired rule DSL + engine, built-in ATT&CK-mapped
+│   │                      rule pack, tenant-scoped custom rules (author via API)
 │   ├── ioc_extraction/    deterministic IOC parser (defang-aware, validated)
 │   ├── threat_intel/      connector base + aggregator (verdict fusion)
 │   ├── risk_scoring/      weighted, explainable score → Critical/High/Med/Low
@@ -79,6 +81,25 @@ EDR in later iterations, exactly like an analyst pivoting. Properties:
 In local/dev the orchestrator runs in-process (`run_investigation`). In production the
 same engine calls are wrapped as Temporal **activities** so each step is retried,
 timed-out, and durably checkpointed (`orchestrator/temporal_workflow.py`).
+
+### Detection engineering & threat hunting
+
+- **Rule DSL** (`engines/detection/`): strictly-typed, Sigma-inspired conditions
+  (`all`/`any`/`none` matchers with equals/contains/regex/... modifiers). Regexes are
+  validated and compiled at load time; a malformed rule can never enter the engine, and
+  one rule failing can never suppress another (per-rule isolation).
+- **Built-in pack**: curated rules (encoded PowerShell, LOLBins, run-key/schtask
+  persistence, LSASS dumping, ransomware staging, phishing lures, anomalous sign-ins),
+  each with ATT&CK mapping, references and documented false positives.
+- **Tenant custom rules**: `PUT /api/v1/detections/rules` (RBAC: `detection:write`);
+  `POST /api/v1/detections/evaluate` dry-runs a raw alert with zero side effects —
+  the detection engineer's author→test loop.
+- **In the agent loop**: `run_detections` executes in the first planner batch; matches
+  land in the package (`detections`), their ATT&CK techniques merge into the MITRE
+  mapping, and severity feeds risk.
+- **Threat hunting**: `POST /api/v1/hunts` (RBAC: `hunt:run`) pivots on free text or
+  explicit indicators — TI enrichment + EDR hunt + long-term case-memory recall in one
+  call, tenant-isolated.
 
 ## 4. Data stores
 

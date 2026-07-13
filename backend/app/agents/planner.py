@@ -39,13 +39,23 @@ class Budget:
 class Planner:
     def next_actions(self, state: InvestigationState) -> list[PlannedAction]:
         # Phase 1 — widen the corpus before extraction so one extraction pass
-        # sees alert text + email body + urls together.
+        # sees alert text + email body + urls together. Detection rules run on
+        # the raw alert and are independent, so they join the first batch.
+        first_batch: list[PlannedAction] = []
+        if not state.detections_ran:
+            first_batch.append(PlannedAction(
+                tool="run_detections",
+                reason="Evaluate detection rules against the raw alert so behavioral "
+                       "matches steer MITRE mapping and risk from the start",
+            ))
         if state.looks_like_phishing() and not state.email_checked:
-            return [PlannedAction(
+            first_batch.append(PlannedAction(
                 tool="fetch_email_context",
                 reason="Alert references a reported email; pull the message, "
                        "campaign recipients and attachments before extracting IOCs",
-            )]
+            ))
+        if first_batch:
+            return first_batch
 
         if not state.extracted:
             return [PlannedAction(

@@ -33,6 +33,9 @@ class Permission(StrEnum):
     COPILOT_QUERY = "copilot:query"
     TICKET_CREATE = "ticket:create"
     AUDIT_READ = "audit:read"
+    DETECTION_READ = "detection:read"
+    DETECTION_WRITE = "detection:write"
+    HUNT_RUN = "hunt:run"
     ADMIN = "admin:*"
 
 
@@ -47,10 +50,16 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.COPILOT_QUERY,
             Permission.TICKET_CREATE,
             Permission.AUDIT_READ,
+            Permission.DETECTION_READ,
         }
     ),
     Role.TIER1: frozenset(
-        {Permission.INVESTIGATION_READ, Permission.IOC_READ, Permission.COPILOT_QUERY}
+        {
+            Permission.INVESTIGATION_READ,
+            Permission.IOC_READ,
+            Permission.COPILOT_QUERY,
+            Permission.DETECTION_READ,
+        }
     ),
     Role.TIER2: frozenset(
         {
@@ -60,6 +69,8 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.IOC_READ,
             Permission.COPILOT_QUERY,
             Permission.TICKET_CREATE,
+            Permission.DETECTION_READ,
+            Permission.HUNT_RUN,
         }
     ),
     Role.TIER3: frozenset(
@@ -71,6 +82,9 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.IOC_READ,
             Permission.COPILOT_QUERY,
             Permission.TICKET_CREATE,
+            Permission.DETECTION_READ,
+            Permission.DETECTION_WRITE,
+            Permission.HUNT_RUN,
         }
     ),
     Role.THREAT_HUNTER: frozenset(
@@ -79,6 +93,9 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.INVESTIGATION_CREATE,
             Permission.IOC_READ,
             Permission.COPILOT_QUERY,
+            Permission.DETECTION_READ,
+            Permission.DETECTION_WRITE,
+            Permission.HUNT_RUN,
         }
     ),
     Role.INCIDENT_RESPONDER: frozenset(
@@ -89,9 +106,13 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.IOC_READ,
             Permission.COPILOT_QUERY,
             Permission.TICKET_CREATE,
+            Permission.DETECTION_READ,
+            Permission.HUNT_RUN,
         }
     ),
-    Role.AUDITOR: frozenset({Permission.INVESTIGATION_READ, Permission.AUDIT_READ}),
+    Role.AUDITOR: frozenset(
+        {Permission.INVESTIGATION_READ, Permission.AUDIT_READ, Permission.DETECTION_READ}
+    ),
 }
 
 

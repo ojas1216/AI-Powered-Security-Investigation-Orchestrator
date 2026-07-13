@@ -19,6 +19,12 @@ from datetime import UTC, datetime
 from app.agents.state import InvestigationState
 from app.core.logging import get_logger
 from app.engines.copilot import Copilot
+from app.engines.detection import (
+    DetectionEngine,
+    RuleStore,
+    build_detection_engine,
+    build_rule_store,
+)
 from app.engines.edr.base import EDRConnector
 from app.engines.email_investigation.base import EmailConnector
 from app.engines.evidence.store import EvidenceStore
@@ -78,6 +84,8 @@ class Toolbox:
         evidence: EvidenceStore,
         copilot: Copilot,
         ticketing: TicketingConnector,
+        detection: DetectionEngine | None = None,
+        rule_store: RuleStore | None = None,
     ) -> None:
         self.ti = ti
         self.sandbox = sandbox
@@ -86,7 +94,14 @@ class Toolbox:
         self.evidence = evidence
         self.copilot = copilot
         self.ticketing = ticketing
+        self.detection = detection or build_detection_engine()
+        self.rule_store = rule_store or build_rule_store()
         self.registry = ToolRegistry()
+        self.registry.register(
+            "run_detections",
+            "Evaluate built-in + tenant detection rules against the alert",
+            self.run_detections,
+        )
         self.registry.register(
             "fetch_email_context",
             "Pull the reported email, campaign recipients, urls and attachments",
@@ -112,6 +127,22 @@ class Toolbox:
             "Hunt IOCs across EDR telemetry to confirm on-host activity",
             self.hunt_edr,
         )
+
+    async def run_detections(self, state: InvestigationState) -> str:
+        tenant_rules = self.rule_store.list(state.tenant)
+        matches = self.detection.evaluate(state.alert, extra_rules=tenant_rules)
+        state.detections = matches
+        state.detections_ran = True
+        # Rule titles are behavioral signals; the keyword MITRE mapper benefits too.
+        state.signals.extend(m.title for m in matches)
+        if matches:
+            state.evidence.append(self.evidence.put_json(
+                state.tenant, "detection_matches", "detections",
+                [m.model_dump() for m in matches]))
+        worst = matches[0].severity.value if matches else "none"
+        return (f"{len(matches)} rule(s) fired "
+                f"(worst severity: {worst}) out of "
+                f"{len(self.detection.rules()) + len(tenant_rules)} evaluated")
 
     async def fetch_email_context(self, state: InvestigationState) -> str:
         msg_id = str(state.alert.extra.get("message_id", state.alert.source_alert_id))

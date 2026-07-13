@@ -53,6 +53,8 @@ select = ["E", "F", "I", "B", "S", "UP", "ASYNC"]
 ignore = ["S101"]  # asserts allowed in tests
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S"]
+# FastAPI's dependency-injection idiom (`Depends(...)` in defaults) trips B008.
+"app/api/**" = ["B008"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -143,12 +143,21 @@ class AutonomousInvestigator:
         pkg.evidence = state.evidence
         self._write_graph(pkg)
 
+        pkg.detections = state.detections
         has_mal_url = any(
             e.ioc.type.value == "url" and e.verdict is Verdict.MALICIOUS
             for e in pkg.iocs)
         pkg.mitre = map_techniques(state.signals, has_malicious_url=has_mal_url)
-        note("map_mitre", "Tag observed behaviors with ATT&CK techniques",
-             f"{len(pkg.mitre)} techniques")
+        # Detection rules carry their own ATT&CK mapping; union it in (dedup by id).
+        known = {t.technique_id for t in pkg.mitre}
+        for match in state.detections:
+            for tech in match.techniques:
+                if tech.technique_id not in known:
+                    pkg.mitre.append(tech)
+                    known.add(tech.technique_id)
+        note("map_mitre", "Tag observed behaviors with ATT&CK techniques "
+             "(keyword mapper + detection-rule mappings)",
+             f"{len(pkg.mitre)} techniques, {len(state.detections)} detections")
 
         pkg.risk = score_investigation(RiskInputs(
             enriched_iocs=pkg.iocs,

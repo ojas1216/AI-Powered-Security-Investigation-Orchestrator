@@ -61,14 +61,16 @@ def make_investigator(*, budget: Budget | None = None,
 # ---------------------------------------------------------------- planner
 
 
-def test_planner_fetches_email_before_extraction():
+def test_planner_fetches_email_and_detections_before_extraction():
     state = InvestigationState(tenant="t", alert=make_phishing_alert())
     planner = Planner()
 
     first = planner.next_actions(state)
-    assert [a.tool for a in first] == ["fetch_email_context"]
-    assert first[0].reason  # every action is explained
+    # Detections and email context are independent -> same concurrent batch.
+    assert {a.tool for a in first} == {"run_detections", "fetch_email_context"}
+    assert all(a.reason for a in first)  # every action is explained
 
+    state.detections_ran = True
     state.email_checked = True
     second = planner.next_actions(state)
     assert [a.tool for a in second] == ["extract_iocs"]
@@ -80,6 +82,7 @@ async def test_planner_batches_enrichment_and_detonation_concurrently():
     and must be planned in the same batch; the hunt must wait for both."""
     state = InvestigationState(tenant="t", alert=make_phishing_alert())
     state.email_msg = await build_email().get_message("phish-0001")
+    state.detections_ran = True
     state.email_checked = True
     state.extracted = True
     state.add_iocs([IOC(type="domain", value="evil.com")])
@@ -94,6 +97,7 @@ async def test_planner_batches_enrichment_and_detonation_concurrently():
 def test_planner_hunts_everything_once_when_ti_is_silent():
     state = InvestigationState(tenant="t", alert=make_phishing_alert(
         title="Odd beacon", description="no phish here", extra={}))
+    state.detections_ran = True
     state.email_checked = True
     state.extracted = True
     ioc = IOC(type="domain", value="unknown-widget.example")

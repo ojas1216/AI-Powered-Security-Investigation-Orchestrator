@@ -52,6 +52,17 @@ class TicketRef(BaseModel):
     url: str | None = None
 
 
+class DetectionMatch(BaseModel):
+    """A detection rule that fired on the ingested alert."""
+
+    rule_id: str
+    title: str
+    severity: Severity
+    techniques: list[MitreTechnique] = Field(default_factory=list)
+    matched_fields: dict[str, str] = Field(default_factory=dict)  # field -> excerpt
+    tags: list[str] = Field(default_factory=list)
+
+
 class AgentTraceStep(BaseModel):
     """One explainable step of the autonomous investigation loop.
 
@@ -90,6 +101,7 @@ class InvestigationPackage(BaseModel):
     overall_verdict: Verdict = Verdict.UNKNOWN
     risk: RiskBreakdown | None = None
     iocs: list[EnrichedIOC] = Field(default_factory=list)
+    detections: list[DetectionMatch] = Field(default_factory=list)
     timeline: list[TimelineEvent] = Field(default_factory=list)
     mitre: list[MitreTechnique] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)

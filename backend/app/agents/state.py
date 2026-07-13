@@ -13,7 +13,7 @@ from app.engines.edr.base import EDRHit
 from app.engines.email_investigation.base import EmailMessage
 from app.schemas.alert import Alert
 from app.schemas.common import Verdict
-from app.schemas.investigation import Evidence, TimelineEvent
+from app.schemas.investigation import DetectionMatch, Evidence, TimelineEvent
 from app.schemas.ioc import IOC, EnrichedIOC
 
 
@@ -22,6 +22,10 @@ class InvestigationState:
     tenant: str
     alert: Alert
     text_corpus: str = ""
+
+    # Detection engineering
+    detections_ran: bool = False
+    detections: list[DetectionMatch] = field(default_factory=list)
 
     # Email context (phishing path)
     email_msg: EmailMessage | None = None
