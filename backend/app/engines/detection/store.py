@@ -41,11 +41,78 @@ class RuleStore:
                           key=lambda r: r.id)
 
 
-_store: RuleStore | None = None
+class PostgresRuleStore:
+    """Durable tenant rules (RLS-isolated); same interface as RuleStore."""
+
+    def upsert(self, tenant: str, rule: DetectionRule) -> DetectionRule:
+        if rule.id in _BUILTIN_IDS:
+            raise ValueError(f"rule id {rule.id} collides with a built-in rule")
+        from app.core.tenancy import set_current_tenant
+        from app.db.models import DetectionRuleRecord
+        from app.db.session import tenant_session
+
+        set_current_tenant(tenant)
+        with tenant_session() as session:
+            rec = (
+                session.query(DetectionRuleRecord)
+                .filter(DetectionRuleRecord.tenant_id == tenant,
+                        DetectionRuleRecord.rule_id == rule.id)
+                .one_or_none()
+            )
+            if rec is None:
+                count = (
+                    session.query(DetectionRuleRecord)
+                    .filter(DetectionRuleRecord.tenant_id == tenant)
+                    .count()
+                )
+                if count >= _MAX_RULES_PER_TENANT:
+                    raise ValueError("tenant custom-rule quota exceeded")
+                session.add(DetectionRuleRecord(
+                    tenant_id=tenant, rule_id=rule.id,
+                    rule=rule.model_dump(mode="json")))
+            else:
+                rec.rule = rule.model_dump(mode="json")
+        return rule
+
+    def delete(self, tenant: str, rule_id: str) -> bool:
+        from app.core.tenancy import set_current_tenant
+        from app.db.models import DetectionRuleRecord
+        from app.db.session import tenant_session
+
+        set_current_tenant(tenant)
+        with tenant_session() as session:
+            deleted = (
+                session.query(DetectionRuleRecord)
+                .filter(DetectionRuleRecord.tenant_id == tenant,
+                        DetectionRuleRecord.rule_id == rule_id)
+                .delete()
+            )
+            return deleted > 0
+
+    def list(self, tenant: str) -> list[DetectionRule]:
+        from app.core.tenancy import set_current_tenant
+        from app.db.models import DetectionRuleRecord
+        from app.db.session import tenant_session
+
+        set_current_tenant(tenant)
+        with tenant_session() as session:
+            rows = (
+                session.query(DetectionRuleRecord)
+                .filter(DetectionRuleRecord.tenant_id == tenant)
+                .all()
+            )
+            rules = [DetectionRule.model_validate(r.rule) for r in rows]
+        rules.sort(key=lambda r: r.id)
+        return rules
 
 
-def build_rule_store() -> RuleStore:
+_store: RuleStore | PostgresRuleStore | None = None
+
+
+def build_rule_store() -> RuleStore | PostgresRuleStore:
     global _store
     if _store is None:
-        _store = RuleStore()
+        from app.core.config import settings
+
+        _store = PostgresRuleStore() if settings.use_postgres else RuleStore()
     return _store

@@ -60,3 +60,38 @@ class AuditLog(Base, TenantMixin, TimestampMixin):
     target: Mapped[str] = mapped_column(String(256), default="")
     result: Mapped[str] = mapped_column(String(32), default="success")
     detail: Mapped[str] = mapped_column(Text, default="")
+
+
+class CaseMemoryRecord(Base, TenantMixin, TimestampMixin):
+    """Compact long-term memory of a completed investigation (agent recall)."""
+
+    __tablename__ = "case_memory"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    investigation_id: Mapped[str] = mapped_column(String(36), index=True)
+    title: Mapped[str] = mapped_column(String(512))
+    verdict: Mapped[str] = mapped_column(String(16), default="unknown")
+    risk_score: Mapped[float] = mapped_column(Float, default=0.0)
+    ioc_keys: Mapped[list] = mapped_column(JSON, default=list)
+    technique_ids: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class ApprovalRecord(Base, TenantMixin, TimestampMixin):
+    """Human-approval request for a playbook action (full lifecycle state)."""
+
+    __tablename__ = "approvals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # approval_id
+    investigation_id: Mapped[str] = mapped_column(String(36), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    request: Mapped[dict] = mapped_column(JSON, default=dict)  # full ApprovalRequest
+
+
+class DetectionRuleRecord(Base, TenantMixin, TimestampMixin):
+    """Tenant-authored detection rule (validated DetectionRule JSON)."""
+
+    __tablename__ = "detection_rules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    rule_id: Mapped[str] = mapped_column(String(64), index=True)
+    rule: Mapped[dict] = mapped_column(JSON, default=dict)

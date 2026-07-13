@@ -123,8 +123,15 @@ def test_hunt_with_no_indicators_is_422(client):
     assert resp.status_code == 422
 
 
-def test_hunt_recalls_related_cases_from_memory(client, auth_headers):
-    """After an investigation runs, hunting the same IOC surfaces the case."""
+def test_hunt_recalls_related_cases_from_memory(client):
+    """After an investigation runs, hunting the same IOC surfaces the case.
+
+    Uses a dedicated tenant so recall ranking is not affected by cases other
+    tests put into the shared process-wide memory.
+    """
+    tenant = "hunt-recall-tenant"
+    ingest_headers = {"X-Tenant-ID": tenant, "X-Roles": "tier3_analyst",
+                      "Authorization": "Bearer dev"}
     payload = {
         "source": "sentinel",
         "properties": {
@@ -136,11 +143,11 @@ def test_hunt_recalls_related_cases_from_memory(client, auth_headers):
         "message_id": "phish-hunt-1",
     }
     ingested = client.post("/api/v1/alerts/ingest", json=payload,
-                           headers=auth_headers)
+                           headers=ingest_headers)
     assert ingested.status_code == 201
     inv_id = ingested.json()["investigation_id"]
 
-    resp = client.post("/api/v1/hunts", headers=hunter_headers(),
+    resp = client.post("/api/v1/hunts", headers=hunter_headers(tenant),
                        json={"indicators": ["evil.com"]})
     related_ids = {r["investigation_id"]
                    for r in resp.json()["related_investigations"]}

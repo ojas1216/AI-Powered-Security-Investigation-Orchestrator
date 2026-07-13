@@ -99,7 +99,7 @@ class AutonomousInvestigator:
                     break
 
             results = await asyncio.gather(
-                *(self._run_tool(state, a) for a in actions))
+                *(self.run_tool(state, a) for a in actions))
             tool_calls += len(actions)
             for action, (ok, outcome, duration_ms, started_at) in zip(
                     actions, results, strict=True):
@@ -109,14 +109,14 @@ class AutonomousInvestigator:
                     action=action.tool, reason=action.reason, outcome=outcome,
                     ok=ok, duration_ms=duration_ms, started_at=started_at))
 
-        await self._finalize(pkg, state, trace, step_no)
+        await self.finalize(pkg, state, trace, step_no)
         log.info("investigation_complete", investigation_id=inv_id,
                  verdict=pkg.overall_verdict.value,
                  risk=pkg.risk.score if pkg.risk else None,
                  trace_steps=len(pkg.agent_trace), tool_calls=tool_calls)
         return pkg
 
-    async def _run_tool(
+    async def run_tool(
         self, state: InvestigationState, action: PlannedAction,
     ) -> tuple[bool, str, float, datetime]:
         started_at = datetime.now(UTC)
@@ -130,7 +130,7 @@ class AutonomousInvestigator:
             state.errors.append(f"{action.tool}: {exc}")
             return False, f"error: {exc}", (time.monotonic() - t0) * 1000, started_at
 
-    async def _finalize(self, pkg: InvestigationPackage, state: InvestigationState,
+    async def finalize(self, pkg: InvestigationPackage, state: InvestigationState,
                         trace: list[AgentTraceStep], step_no: int) -> None:
         def note(action: str, reason: str, outcome: str) -> None:
             nonlocal step_no

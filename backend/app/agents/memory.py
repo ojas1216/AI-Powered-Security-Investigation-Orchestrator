@@ -121,6 +121,73 @@ class InMemoryCaseMemory(CaseMemory):
         return matches[:limit]
 
 
+class PostgresCaseMemory(CaseMemory):
+    """Durable long-term memory (survives restarts; shared across workers).
+
+    Isolation is enforced twice: the explicit tenant filter here, and the
+    database's own RLS policy on `case_memory` (per-transaction tenant GUC).
+    Candidate scan is capped to the most recent rows so recall stays O(bounded)
+    even for tenants with years of history.
+    """
+
+    _CANDIDATE_LIMIT = 1000
+
+    def remember(self, pkg: InvestigationPackage) -> None:
+        from app.core.tenancy import set_current_tenant
+        from app.db.models import CaseMemoryRecord
+        from app.db.session import tenant_session
+
+        set_current_tenant(pkg.tenant)  # background workers may lack request ctx
+        with tenant_session() as session:
+            session.add(CaseMemoryRecord(
+                tenant_id=pkg.tenant,
+                investigation_id=pkg.investigation_id,
+                title=pkg.alert.title,
+                verdict=pkg.overall_verdict.value,
+                risk_score=pkg.risk.score if pkg.risk else 0.0,
+                ioc_keys=sorted(e.ioc.key() for e in pkg.iocs),
+                technique_ids=sorted(t.technique_id for t in pkg.mitre),
+            ))
+        log.info("case_remembered", investigation_id=pkg.investigation_id,
+                 tenant=pkg.tenant, backend="postgres")
+
+    def recall(self, tenant: str, ioc_keys: set[str], technique_ids: set[str],
+               limit: int = 5) -> list[RelatedCase]:
+        from app.core.tenancy import set_current_tenant
+        from app.db.models import CaseMemoryRecord
+        from app.db.session import tenant_session
+
+        set_current_tenant(tenant)
+        with tenant_session() as session:
+            rows = (
+                session.query(CaseMemoryRecord)
+                .filter(CaseMemoryRecord.tenant_id == tenant)
+                .order_by(CaseMemoryRecord.created_at.desc())
+                .limit(self._CANDIDATE_LIMIT)
+                .all()
+            )
+            candidates = [
+                CaseRecord(
+                    investigation_id=r.investigation_id,
+                    tenant=r.tenant_id,
+                    title=r.title,
+                    verdict=Verdict(r.verdict),
+                    risk_score=r.risk_score,
+                    ioc_keys=frozenset(r.ioc_keys or ()),
+                    technique_ids=frozenset(r.technique_ids or ()),
+                )
+                for r in rows
+            ]
+        iocs = frozenset(ioc_keys)
+        techs = frozenset(technique_ids)
+        matches = [
+            m for c in candidates
+            if (m := similarity(c, iocs, techs)) is not None
+        ]
+        matches.sort(key=lambda m: m.similarity, reverse=True)
+        return matches[:limit]
+
+
 _memory: CaseMemory | None = None
 
 
@@ -128,5 +195,7 @@ def build_case_memory() -> CaseMemory:
     """Process-wide memory singleton (one agent brain per worker)."""
     global _memory
     if _memory is None:
-        _memory = InMemoryCaseMemory()
+        from app.core.config import settings
+
+        _memory = PostgresCaseMemory() if settings.use_postgres else InMemoryCaseMemory()
     return _memory
