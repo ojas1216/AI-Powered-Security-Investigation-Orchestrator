@@ -67,6 +67,14 @@ Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Security posture in
 
 ---
 
+## One-click launch (Windows)
+
+Double-click **`AegisFlow.exe`** in the project root. It starts the backend + the
+SOC console and opens your browser to the UI; on first run it auto-installs any
+missing dependencies. Log in with the dev-mode button (tenant `acme`, role
+`tier3_analyst`). See [installer/README.md](installer/README.md). Rebuild with
+`.\installer\build.ps1`.
+
 ## Quickstart (local, no external keys required)
 
 ```bash
