@@ -102,6 +102,40 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class Fingerprint(BaseModel):
+    """One typed fingerprint of an incident.
+
+    `hash` is a stable identity of the feature set (exact-ish matching);
+    `features` is the underlying set used for similarity (overlap) comparison.
+    """
+
+    kind: str  # infrastructure | malware | ttp | identity | threat | campaign | incident
+    hash: str
+    features: list[str] = Field(default_factory=list)
+    label: str = ""
+
+
+class IncidentDNA(BaseModel):
+    """The multi-dimensional fingerprint of an investigation, stored permanently
+    so future incidents can be compared against it."""
+
+    investigation_id: str
+    fingerprints: list[Fingerprint] = Field(default_factory=list)
+
+    def by_kind(self, kind: str) -> Fingerprint | None:
+        return next((f for f in self.fingerprints if f.kind == kind), None)
+
+
+class FingerprintMatch(BaseModel):
+    """A prior incident that resembles this one, per-dimension."""
+
+    investigation_id: str
+    title: str = ""
+    overall_similarity: float = Field(ge=0.0, le=1.0)
+    dimension_similarity: dict[str, float] = Field(default_factory=dict)
+    shared: dict[str, list[str]] = Field(default_factory=dict)
+
+
 class ConsensusVote(BaseModel):
     """One evidence source's independent vote in the consensus decision."""
 
@@ -207,5 +241,7 @@ class InvestigationPackage(BaseModel):
     plan_graph: list[PlanNode] = Field(default_factory=list)
     reflections: list[ReflectionFinding] = Field(default_factory=list)
     consensus: ConsensusResult | None = None
+    incident_dna: IncidentDNA | None = None
+    dna_matches: list[FingerprintMatch] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

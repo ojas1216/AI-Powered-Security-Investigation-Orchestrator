@@ -22,6 +22,7 @@ import { AgentTrace } from "@/components/investigation/AgentTrace";
 import { PlanGraph } from "@/components/investigation/PlanGraph";
 import { Reflections } from "@/components/investigation/Reflections";
 import { Consensus } from "@/components/investigation/Consensus";
+import { IncidentDna } from "@/components/investigation/IncidentDna";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
 import { runAgent } from "@/services/platform";
@@ -140,6 +141,12 @@ function Overview({ pkg }: { pkg: InvestigationPackage }) {
       {pkg.consensus && (
         <div className="lg:col-span-3">
           <Consensus consensus={pkg.consensus} />
+        </div>
+      )}
+
+      {pkg.incident_dna && (
+        <div className="lg:col-span-3">
+          <IncidentDna dna={pkg.incident_dna} matches={pkg.dna_matches ?? []} />
         </div>
       )}
 

@@ -184,6 +184,26 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface Fingerprint {
+  kind: string;
+  hash: string;
+  features: string[];
+  label: string;
+}
+
+export interface IncidentDNA {
+  investigation_id: string;
+  fingerprints: Fingerprint[];
+}
+
+export interface FingerprintMatch {
+  investigation_id: string;
+  title: string;
+  overall_similarity: number;
+  dimension_similarity: Record<string, number>;
+  shared: Record<string, string[]>;
+}
+
 export interface ConsensusVote {
   voter: string;
   verdict: Verdict;
@@ -301,6 +321,8 @@ export interface InvestigationPackage {
   plan_graph: PlanNode[];
   reflections: ReflectionFinding[];
   consensus: ConsensusResult | null;
+  incident_dna: IncidentDNA | null;
+  dna_matches: FingerprintMatch[];
   created_at: string;
   completed_at?: string | null;
 }

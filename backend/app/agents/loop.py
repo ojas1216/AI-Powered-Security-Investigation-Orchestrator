@@ -254,6 +254,23 @@ class AutonomousInvestigator:
              f"confidence={pkg.consensus.confidence:.0%} "
              f"({len(pkg.consensus.votes)} voters)")
 
+        # Incident DNA: compute typed fingerprints, compare against prior
+        # incidents (before storing this one), then persist for future compares.
+        from app.engines.fingerprint import (
+            build_fingerprint_engine,
+            build_fingerprint_store,
+        )
+
+        fp_engine = build_fingerprint_engine()
+        fp_store = build_fingerprint_store()
+        pkg.incident_dna = fp_engine.compute(pkg)
+        priors = fp_store.all_for_tenant(pkg.tenant)
+        pkg.dna_matches = fp_engine.match(pkg.incident_dna, priors)
+        fp_store.store(pkg.tenant, pkg.incident_dna, pkg.alert.title)
+        note("incident_dna", "Fingerprint the incident (infra/malware/TTP/identity) "
+             "and compare against prior incidents",
+             f"{len(pkg.dna_matches)} fingerprint match(es)")
+
         # Self-review: record residual gaps/unverified conclusions/contradictions
         # after all collection (and any reflection-driven follow-ups) — every
         # investigation self-reviews, regardless of strategy.

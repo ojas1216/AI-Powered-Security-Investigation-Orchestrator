@@ -7,6 +7,7 @@ from app.api.v1.routes import (
     auth,
     copilot,
     detections,
+    fingerprints,
     graph,
     health,
     hunts,
@@ -32,3 +33,5 @@ api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(graph.router, prefix="/graph", tags=["graph"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(offline.router, prefix="/offline", tags=["offline"])
+api_router.include_router(fingerprints.router, prefix="/fingerprints",
+                          tags=["fingerprints"])

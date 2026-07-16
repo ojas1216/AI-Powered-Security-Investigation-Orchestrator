@@ -210,6 +210,23 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Incident DNA (fingerprints)
+
+`engines/fingerprint/` computes **seven typed fingerprints** of every
+investigation — infrastructure, malware, TTP, identity, threat, campaign, and a
+composite incident fingerprint — each with a stable hash (exact-ish identity)
+and its feature set (for overlap similarity). Fingerprints are stored
+permanently (tenant-scoped; in-memory or Postgres/RLS, alembic 0004), and each
+new incident is compared against prior ones with **per-dimension similarity**
+("83% infrastructure overlap, 100% TTP overlap"). Results ship on the package
+(`incident_dna`, `dna_matches`) and via `GET /fingerprints/{id}` +
+`/fingerprints/{id}/matches`.
+
+This is the typed, multi-dimensional complement to the flat IOC/technique overlap
+in `agents/memory.py` and the text similarity in `engines/semantic` — it answers
+"same infrastructure, different malware?" which those cannot, and its campaign
+fingerprint seeds campaign clustering.
+
 ### Consensus + confidence engine
 
 `agents/consensus.py` makes the final verdict a **weighted vote of independent

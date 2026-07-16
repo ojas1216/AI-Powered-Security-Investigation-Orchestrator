@@ -109,3 +109,14 @@ class UserAccountRecord(Base, TenantMixin, TimestampMixin):
     roles: Mapped[list] = mapped_column(JSON, default=list)
     provider: Mapped[str] = mapped_column(String(16), default="password")
     password_hash: Mapped[str] = mapped_column(String(256), default="")
+
+
+class IncidentDNARecord(Base, TenantMixin, TimestampMixin):
+    """Persisted incident fingerprints (Incident DNA), tenant-scoped."""
+
+    __tablename__ = "incident_dna"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    investigation_id: Mapped[str] = mapped_column(String(36), index=True)
+    title: Mapped[str] = mapped_column(String(512), default="")
+    dna: Mapped[dict] = mapped_column(JSON, default=dict)
