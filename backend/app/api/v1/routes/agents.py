@@ -46,4 +46,7 @@ async def run_agent(
         raise HTTPException(status_code=404, detail=f"unknown agent: {name}") from exc
     log.info("agent_invoked", agent=name, tenant=principal.tenant,
              actor=principal.username)
+    from app.core.metrics import registry
+
+    registry().inc("aegis_agent_runs_total", agent=name)
     return await agent.run(body.payload, tenant=principal.tenant)

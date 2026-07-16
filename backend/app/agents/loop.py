@@ -28,6 +28,8 @@ from app.agents.planner import Budget, PlannedAction, Planner
 from app.agents.state import InvestigationState
 from app.agents.tools import Toolbox
 from app.core.logging import get_logger
+from app.core.metrics import registry
+from app.core.observability import span
 from app.engines.approvals import ApprovalService, build_approval_service
 from app.engines.graph.client import GraphClient, GraphTriple
 from app.engines.mitre import map_techniques
@@ -116,11 +118,20 @@ class AutonomousInvestigator:
                     action=action.tool, reason=action.reason, outcome=outcome,
                     ok=ok, duration_ms=duration_ms, started_at=started_at))
 
-        await self.finalize(pkg, state, trace, step_no)
+        with span("investigation.finalize", investigation_id=inv_id):
+            await self.finalize(pkg, state, trace, step_no)
+
+        duration = time.monotonic() - started
+        registry().observe("aegis_investigation_duration_seconds", duration)
+        registry().inc("aegis_investigations_total",
+                       verdict=pkg.overall_verdict.value)
+        if state.detections:
+            registry().inc("aegis_detections_fired_total", len(state.detections))
         log.info("investigation_complete", investigation_id=inv_id,
                  verdict=pkg.overall_verdict.value,
                  risk=pkg.risk.score if pkg.risk else None,
-                 trace_steps=len(pkg.agent_trace), tool_calls=tool_calls)
+                 trace_steps=len(pkg.agent_trace), tool_calls=tool_calls,
+                 duration_seconds=round(duration, 3))
         return pkg
 
     async def run_tool(
@@ -129,12 +140,15 @@ class AutonomousInvestigator:
         started_at = datetime.now(UTC)
         t0 = time.monotonic()
         try:
-            spec = self.toolbox.registry.get(action.tool)
-            outcome = await spec.fn(state, **action.params)
+            with span("agent.tool", tool=action.tool):
+                spec = self.toolbox.registry.get(action.tool)
+                outcome = await spec.fn(state, **action.params)
+            registry().inc("aegis_tool_calls_total", tool=action.tool, ok="true")
             return True, outcome, (time.monotonic() - t0) * 1000, started_at
         except Exception as exc:  # noqa: BLE001 - single tool failure must not kill the case
             log.warning("tool_failed", tool=action.tool, error=str(exc))
             state.errors.append(f"{action.tool}: {exc}")
+            registry().inc("aegis_tool_calls_total", tool=action.tool, ok="false")
             return False, f"error: {exc}", (time.monotonic() - t0) * 1000, started_at
 
     async def finalize(self, pkg: InvestigationPackage, state: InvestigationState,

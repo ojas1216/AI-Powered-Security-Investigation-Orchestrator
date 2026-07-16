@@ -128,6 +128,19 @@ PENDING ──approve──▶ APPROVED ──mark executed──▶ EXECUTED
 - API: `GET /api/v1/approvals`, `POST /api/v1/approvals/{id}/decision`,
   `POST /api/v1/approvals/{id}/executed`. The package carries `approval_ids`.
 
+### Observability
+
+- **Metrics** (`core/metrics.py`): a zero-dependency, thread-safe registry
+  (labelled counters + histograms) rendered in Prometheus text format at
+  `GET /metrics` — always available, no client library, air-gap-capable. The
+  agent loop records `aegis_investigations_total{verdict}`,
+  `aegis_investigation_duration_seconds`, `aegis_tool_calls_total{tool,ok}`,
+  `aegis_detections_fired_total`; the API records `aegis_agent_runs_total{agent}`
+  and `aegis_alerts_ingested_total{mode}`.
+- **Tracing** (`core/observability.py`): `span(name, **attrs)` emits OpenTelemetry
+  spans when the SDK is installed and degrades to a no-op otherwise, so the loop
+  (`investigation.finalize`, `agent.tool`) is instrumented unconditionally.
+
 ### Semantic memory & natural-language search
 
 `engines/semantic/` embeds every completed case and searches them in natural

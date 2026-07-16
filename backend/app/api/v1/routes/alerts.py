@@ -47,6 +47,9 @@ async def ingest_alert(
     alert = get_normalizer(source).normalize(payload)
     log.info("alert_ingested", tenant=principal.tenant, source=source.value,
              alert_id=alert.source_alert_id, actor=principal.username, mode=mode)
+    from app.core.metrics import registry
+
+    registry().inc("aegis_alerts_ingested_total", mode=mode)
 
     if mode == "async":
         try:

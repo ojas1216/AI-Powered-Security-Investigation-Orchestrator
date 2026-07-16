@@ -1,13 +1,39 @@
-"""OpenTelemetry + Prometheus wiring (best-effort, no-op if libs absent).
+"""OpenTelemetry spans + Prometheus metrics.
 
-Kept import-light so the app runs in minimal/offline environments. In the full
-stack, the OTel SDK is installed and exports traces to the collector.
+Metrics are always available: the /metrics endpoint renders our zero-dependency
+registry (app/core/metrics.py) so it works air-gapped and in tests. OTel tracing
+is best-effort — spans are emitted through the SDK when it is installed, and the
+`span()` context manager degrades to a no-op otherwise, so the agent loop can be
+instrumented unconditionally.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from app.core.logging import get_logger
+from app.core.metrics import registry
 
 log = get_logger("otel")
+
+try:
+    from opentelemetry import trace as _otel_trace
+
+    _tracer = _otel_trace.get_tracer("aegisflow")
+except Exception:  # pragma: no cover - optional dep
+    _tracer = None
+
+
+@contextmanager
+def span(name: str, **attributes) -> Iterator[None]:
+    """Start an OTel span if tracing is available; else a no-op context."""
+    if _tracer is None:
+        yield
+        return
+    with _tracer.start_as_current_span(name) as s:  # pragma: no cover - needs SDK
+        for k, v in attributes.items():
+            s.set_attribute(k, v)
+        yield
 
 
 def setup_observability(app, service_name: str = "aegisflow-api") -> None:
@@ -20,11 +46,17 @@ def setup_observability(app, service_name: str = "aegisflow-api") -> None:
         log.info("otel_skipped", reason=str(exc))
 
 
-def metrics_asgi_app():
-    """Return a Prometheus ASGI app if the client lib is installed, else None."""
-    try:
-        from prometheus_client import make_asgi_app
+async def _metrics_app(scope, receive, send) -> None:
+    """Minimal ASGI app rendering the metrics registry as Prometheus text."""
+    body = registry().render().encode()
+    await send({
+        "type": "http.response.start",
+        "status": 200,
+        "headers": [(b"content-type", b"text/plain; version=0.0.4; charset=utf-8")],
+    })
+    await send({"type": "http.response.body", "body": body})
 
-        return make_asgi_app()
-    except Exception:  # pragma: no cover - optional dep
-        return None
+
+def metrics_asgi_app():
+    """Always-available Prometheus exposition ASGI app (no client lib needed)."""
+    return _metrics_app
