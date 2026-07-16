@@ -33,7 +33,10 @@ export function AlertsPage() {
       qc.invalidateQueries({ queryKey: investigationKeys.all });
       navigate(`/investigations/${pkg.investigation_id}`);
     } catch {
-      setUploadError("Could not parse that file (.eml / .xml / .json / .csv / .txt).");
+      setUploadError(
+        "Could not parse that file (.eml/.msg, .xml/.json events, .csv/.txt, " +
+        ".docx/.xlsx, .pdf, .pcap/.pcapng, .zip).",
+      );
     } finally {
       setUploading(false);
     }
@@ -83,7 +86,7 @@ export function AlertsPage() {
               <input
                 ref={fileInput}
                 type="file"
-                accept=".eml,.msg,.xml,.json,.csv,.tsv,.txt"
+                accept=".eml,.msg,.xml,.json,.csv,.tsv,.txt,.docx,.xlsx,.pdf,.pcap,.pcapng,.zip"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];

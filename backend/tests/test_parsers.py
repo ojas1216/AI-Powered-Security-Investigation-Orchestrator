@@ -118,7 +118,7 @@ def test_txt_parser_is_freetext():
 
 def test_unsupported_extension_raises():
     with pytest.raises(ParseError, match="unsupported artifact type"):
-        parse_artifact("capture.pcap", b"\x00")
+        parse_artifact("memory.dmp", b"\x00")
 
 
 def test_supported_extensions_listed():
@@ -165,7 +165,7 @@ def test_ingest_file_bad_base64_is_422(client):
 
 def test_ingest_file_unsupported_type_is_422(client):
     resp = client.post("/api/v1/alerts/ingest-file", headers=_headers(),
-                       json={"filename": "x.pcap", "content": "data"})
+                       json={"filename": "x.dmp", "content": "data"})
     assert resp.status_code == 422
 
 

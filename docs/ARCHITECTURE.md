@@ -22,8 +22,10 @@ backend/app
 ├── schemas/         Pydantic v2 contracts (Alert, IOC, Investigation, ...)
 ├── db/              SQLAlchemy 2.x models, session, RLS helpers
 ├── ingestion/       SIEM normalizers + artifact parsers → common Alert schema
-│   └── parsers/         .eml, Windows/Sysmon event (.xml/.json), .csv/.txt
-│                        (stdlib-only, XXE-hardened) → Alert → investigate
+│   └── parsers/         .eml/.msg, Windows/Sysmon event (.xml/.json), .csv/.txt,
+│                        .docx/.xlsx (zip+XML), .pdf/.pcap/.pcapng (strings),
+│                        .zip (aggregate members) — stdlib-only, XXE/zip-bomb
+│                        hardened → Alert → investigate
 ├── agents/          autonomous investigation core:
 │   ├── planner.py       dynamic, deterministic action planner (budgeted)
 │   ├── loop.py          plan → act → observe → re-plan → finalize
