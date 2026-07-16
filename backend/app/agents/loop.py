@@ -40,7 +40,6 @@ from app.engines.timeline import build_timeline
 from app.schemas.alert import Alert
 from app.schemas.common import InvestigationStatus, Verdict
 from app.schemas.investigation import AgentTraceStep, InvestigationPackage
-from app.schemas.ioc import EnrichedIOC
 
 log = get_logger("agents.loop")
 
@@ -236,9 +235,24 @@ class AutonomousInvestigator:
             asset_criticality=_asset_criticality(pkg.affected_hosts),
             recipient_count=len(pkg.affected_users),
         ))
-        pkg.overall_verdict = _overall_verdict(pkg.iocs, pkg.risk.score)
         note("score_risk", "Fuse TI/sandbox/EDR/ATT&CK/asset factors into 0-100 risk",
-             f"risk={pkg.risk.score:.0f} verdict={pkg.overall_verdict.value}")
+             f"risk={pkg.risk.score:.0f}")
+
+        # Consensus: the final verdict is a weighted vote of independent evidence
+        # sources, never a single agent's call — with explainable confidence,
+        # alternative hypotheses, and supporting/rejected observations.
+        from app.agents.consensus import build_consensus_engine
+
+        pkg.consensus = build_consensus_engine().decide(
+            iocs=pkg.iocs, edr_hit_count=len(state.edr_hits),
+            sandbox_malscore=state.sandbox_malscore, detections=pkg.detections,
+            mitre=pkg.mitre)
+        pkg.overall_verdict = pkg.consensus.verdict
+        note("consensus", "Aggregate independent evidence sources into an "
+             "explainable verdict (no single agent decides)",
+             f"verdict={pkg.overall_verdict.value} "
+             f"confidence={pkg.consensus.confidence:.0%} "
+             f"({len(pkg.consensus.votes)} voters)")
 
         # Self-review: record residual gaps/unverified conclusions/contradictions
         # after all collection (and any reflection-driven follow-ups) — every
@@ -317,16 +331,6 @@ class AutonomousInvestigator:
                     for u in pkg.affected_users]
         if triples:
             self.graph.upsert(pkg.tenant, triples)
-
-
-def _overall_verdict(iocs: list[EnrichedIOC], risk_score: float) -> Verdict:
-    if any(e.verdict is Verdict.MALICIOUS for e in iocs) or risk_score >= 70:
-        return Verdict.MALICIOUS
-    if any(e.verdict is Verdict.SUSPICIOUS for e in iocs) or risk_score >= 35:
-        return Verdict.SUSPICIOUS
-    if iocs:
-        return Verdict.BENIGN
-    return Verdict.UNKNOWN
 
 
 def _asset_criticality(hosts: list[str]) -> float:

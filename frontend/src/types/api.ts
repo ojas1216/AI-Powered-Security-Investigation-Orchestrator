@@ -184,6 +184,32 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface ConsensusVote {
+  voter: string;
+  verdict: Verdict;
+  malice: number;
+  weight: number;
+  confidence: number;
+  rationale: string;
+}
+
+export interface Hypothesis {
+  verdict: Verdict;
+  probability: number;
+  rationale: string;
+}
+
+export interface ConsensusResult {
+  verdict: Verdict;
+  confidence: number;
+  agreement: number;
+  votes: ConsensusVote[];
+  hypotheses: Hypothesis[];
+  supporting: string[];
+  rejected: string[];
+  reasoning: string[];
+}
+
 export interface ReflectionFinding {
   category: "coverage" | "gap" | "unverified" | "contradiction" | string;
   detail: string;
@@ -274,6 +300,7 @@ export interface InvestigationPackage {
   root_cause: RootCause | null;
   plan_graph: PlanNode[];
   reflections: ReflectionFinding[];
+  consensus: ConsensusResult | null;
   created_at: string;
   completed_at?: string | null;
 }

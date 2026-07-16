@@ -210,6 +210,23 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Consensus + confidence engine
+
+`agents/consensus.py` makes the final verdict a **weighted vote of independent
+evidence sources** — never a single agent's call. Threat intel, EDR (on-host),
+sandbox, detection rules and ATT&CK each cast a weighted vote *only when they
+have evidence* (they abstain otherwise), so a conclusion resting on one weak
+source is inherently low-confidence — "reject unsupported conclusions" falls out
+of the math, and a lone voter's confidence is explicitly penalized.
+
+The result (`package.consensus`) is fully explainable per the Explainable-AI
+contract: the votes, the verdict + confidence, inter-source **agreement**, ranked
+**alternative hypotheses**, and the **supporting / rejected** observations plus a
+reasoning chain. It replaces the old single-function verdict heuristic and is
+authoritative (`overall_verdict = consensus.verdict`); the reflection loop's
+"unverified single-source" follow-ups feed it stronger evidence before it
+decides. Surfaced as the Consensus panel in the investigation overview.
+
 ### Reflection loop (self-review)
 
 `agents/reflection.py` gives every investigation a senior-analyst self-review.

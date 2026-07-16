@@ -102,6 +102,43 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ConsensusVote(BaseModel):
+    """One evidence source's independent vote in the consensus decision."""
+
+    voter: str  # threat_intel | edr | sandbox | detections | mitre
+    verdict: Verdict
+    malice: float = Field(ge=0.0, le=1.0)  # 0=benign .. 1=malicious
+    weight: float = Field(ge=0.0, le=1.0)  # source reliability
+    confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = ""
+
+
+class Hypothesis(BaseModel):
+    """An alternative conclusion the consensus weighed, with its probability."""
+
+    verdict: Verdict
+    probability: float = Field(ge=0.0, le=1.0)
+    rationale: str = ""
+
+
+class ConsensusResult(BaseModel):
+    """Explainable multi-voter decision — no single agent decides alone.
+
+    Carries the full reasoning surface required of an explainable decision:
+    the votes, the chosen verdict + confidence, ranked alternative hypotheses,
+    the supporting and rejected observations, and the reasoning chain.
+    """
+
+    verdict: Verdict
+    confidence: float = Field(ge=0.0, le=1.0)
+    agreement: float = Field(ge=0.0, le=1.0)  # inter-voter agreement
+    votes: list[ConsensusVote] = Field(default_factory=list)
+    hypotheses: list[Hypothesis] = Field(default_factory=list)
+    supporting: list[str] = Field(default_factory=list)
+    rejected: list[str] = Field(default_factory=list)
+    reasoning: list[str] = Field(default_factory=list)
+
+
 class ReflectionFinding(BaseModel):
     """A self-review observation about the investigation's evidence.
 
@@ -169,5 +206,6 @@ class InvestigationPackage(BaseModel):
     root_cause: RootCause | None = None
     plan_graph: list[PlanNode] = Field(default_factory=list)
     reflections: list[ReflectionFinding] = Field(default_factory=list)
+    consensus: ConsensusResult | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
