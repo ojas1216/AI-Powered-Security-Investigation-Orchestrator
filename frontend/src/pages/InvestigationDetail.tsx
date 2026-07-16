@@ -20,6 +20,7 @@ import { AttackGraph } from "@/components/graph/AttackGraph";
 import { MitreMatrix } from "@/components/mitre/MitreMatrix";
 import { AgentTrace } from "@/components/investigation/AgentTrace";
 import { PlanGraph } from "@/components/investigation/PlanGraph";
+import { Reflections } from "@/components/investigation/Reflections";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
 import { runAgent } from "@/services/platform";
@@ -132,6 +133,12 @@ function Overview({ pkg }: { pkg: InvestigationPackage }) {
       {(pkg.related_investigations?.length ?? 0) > 0 && (
         <div className="lg:col-span-3">
           <RelatedCases cases={pkg.related_investigations} />
+        </div>
+      )}
+
+      {(pkg.reflections?.length ?? 0) > 0 && (
+        <div className="lg:col-span-3">
+          <Reflections findings={pkg.reflections} />
         </div>
       )}
 

@@ -102,6 +102,20 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ReflectionFinding(BaseModel):
+    """A self-review observation about the investigation's evidence.
+
+    category: coverage (work left undone) | gap (evidence not collected) |
+    unverified (a conclusion resting on a single source) | contradiction
+    (sources disagree). Residual findings remain after the reflection loop has
+    done what it can — they are what an analyst should still scrutinize.
+    """
+
+    category: str
+    detail: str
+    action_recommended: str = ""
+
+
 class PlanNode(BaseModel):
     """One node of the investigation execution graph (planning layer)."""
 
@@ -154,5 +168,6 @@ class InvestigationPackage(BaseModel):
     business_impact: BusinessImpact | None = None
     root_cause: RootCause | None = None
     plan_graph: list[PlanNode] = Field(default_factory=list)
+    reflections: list[ReflectionFinding] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

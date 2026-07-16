@@ -154,12 +154,15 @@ class AutonomousInvestigator:
         same trace as the batch loop plus a visualizable plan graph on the package.
         """
         from app.agents.planning import PriorityScheduler
+        from app.agents.reflection import build_reflection_engine
 
         async def execute(state_, tool, params):
             return await self.run_tool(state_, PlannedAction(tool=tool, reason="",
                                                              params=params))
 
-        scheduler = PriorityScheduler(execute, budget=self.budget)
+        scheduler = PriorityScheduler(
+            execute, budget=self.budget,
+            reflect=build_reflection_engine().suggest)
         result = await scheduler.run(state)
         pkg.plan_graph = result.graph.to_plan_nodes()
 
@@ -236,6 +239,16 @@ class AutonomousInvestigator:
         pkg.overall_verdict = _overall_verdict(pkg.iocs, pkg.risk.score)
         note("score_risk", "Fuse TI/sandbox/EDR/ATT&CK/asset factors into 0-100 risk",
              f"risk={pkg.risk.score:.0f} verdict={pkg.overall_verdict.value}")
+
+        # Self-review: record residual gaps/unverified conclusions/contradictions
+        # after all collection (and any reflection-driven follow-ups) — every
+        # investigation self-reviews, regardless of strategy.
+        from app.agents.reflection import build_reflection_engine
+
+        pkg.reflections = build_reflection_engine().review(state)
+        note("self_review", "Reflect on residual gaps, unverified conclusions and "
+             "contradictions in the collected evidence",
+             f"{len(pkg.reflections)} residual finding(s)")
 
         # Root cause (kill-chain origin) and business impact — deterministic,
         # grounded in the case's own timeline/graph/blast-radius.

@@ -1,11 +1,18 @@
-"""Priority scheduler: drive the task graph to completion.
+"""Priority scheduler: drive the task graph to completion, with reflection.
 
-Loop: expand the graph from the current state → run all ready tasks concurrently
-(highest priority first) → fold results into the state → retry transient failures
-(bounded) → re-expand as new evidence unlocks new tasks → stop when the graph is
-terminal or a budget trips. This is the autonomous execution core; it reuses the
-existing tool executor and specialist agents, adding explicit dependencies,
-deduplication, per-task retry, and progress tracking over the flat batch loop.
+Two nested loops:
+- **drain**: expand the graph from the current state → run all ready tasks
+  concurrently (highest priority first) → fold results into the state → retry
+  transient failures (bounded) → re-expand as new evidence unlocks new tasks →
+  stop when no task is ready (converged) or a budget trips.
+- **reflect**: once drained, ask the reflection engine whether anything was
+  missed; if it proposes follow-up actions, inject them as a new task wave and
+  drain again. Repeat until reflection proposes nothing (confidence stabilizes)
+  or the reflection-round budget is hit.
+
+Reuses the existing tool executor and specialist agents; adds explicit
+dependencies, deduplication, per-task retry, progress tracking, and the
+self-review loop over the flat batch loop.
 """
 from __future__ import annotations
 
@@ -14,62 +21,103 @@ import time
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 
-from app.agents.planner import Budget
+from app.agents.planner import Budget, PlannedAction
 from app.agents.planning.engine import PlanningEngine
 from app.agents.planning.graph import TaskGraph
-from app.agents.planning.task import Task, TaskStatus
+from app.agents.planning.task import DEFAULT_PRIORITY, Task, TaskStatus
 from app.agents.state import InvestigationState
 from app.core.logging import get_logger
 
 log = get_logger("planning.scheduler")
 
 # (ok, outcome, duration_ms, started_at)
-ExecFn = Callable[[InvestigationState, str, dict], Awaitable[tuple[bool, str, float, datetime]]]
+ExecFn = Callable[[InvestigationState, str, dict],
+                  Awaitable[tuple[bool, str, float, datetime]]]
+ReflectFn = Callable[[InvestigationState], list[PlannedAction]]
 
 
 class SchedulerResult:
-    def __init__(self, graph: TaskGraph, waves: int, tool_calls: int) -> None:
+    def __init__(self, graph: TaskGraph, waves: int, tool_calls: int,
+                 reflection_rounds: int = 0) -> None:
         self.graph = graph
         self.waves = waves
         self.tool_calls = tool_calls
+        self.reflection_rounds = reflection_rounds
 
 
 class PriorityScheduler:
     def __init__(self, execute: ExecFn, *, engine: PlanningEngine | None = None,
-                 budget: Budget | None = None) -> None:
+                 budget: Budget | None = None, reflect: ReflectFn | None = None,
+                 max_reflection_rounds: int = 2) -> None:
         self._execute = execute
         self._engine = engine or PlanningEngine()
         self._budget = budget or Budget()
+        self._reflect = reflect
+        self._max_reflection_rounds = max_reflection_rounds
 
     async def run(self, state: InvestigationState) -> SchedulerResult:
         graph = TaskGraph()
         started = time.monotonic()
+        wave = 0
         tool_calls = 0
-        waves = 0
+        reflection_round = 0
 
-        for wave in range(1, self._budget.max_iterations + 1):
+        while True:
+            wave, tool_calls, budget_hit = await self._drain(
+                state, graph, started, wave, tool_calls)
+            if budget_hit:
+                break
+            if self._reflect is None or reflection_round >= self._max_reflection_rounds:
+                break
+            extra = self._reflect(state)
+            if not extra:
+                break  # confidence stabilized: nothing new to collect
+            reflection_round += 1
+            inject_wave = wave + 1
+            prior = {t.id for t in graph.all()}  # reflection depends on all prior work
+            for action in extra:
+                graph.add(Task(
+                    id="", tool=action.tool, reason=action.reason,
+                    params=dict(action.params),
+                    priority=DEFAULT_PRIORITY.get(action.tool, 50),
+                    depends_on=set(prior), wave=inject_wave))
+            log.info("reflection_round", round=reflection_round,
+                     follow_ups=len(extra))
+
+        done, total = graph.progress()
+        log.info("scheduler_complete", waves=wave, tool_calls=tool_calls,
+                 reflection_rounds=reflection_round, tasks_done=done,
+                 tasks_total=total)
+        return SchedulerResult(graph, wave, tool_calls, reflection_round)
+
+    async def _drain(self, state: InvestigationState, graph: TaskGraph,
+                     started: float, wave: int, tool_calls: int,
+                     ) -> tuple[int, int, bool]:
+        """Run planner-driven waves until convergence or a budget. Returns
+        (wave, tool_calls, budget_hit)."""
+        while wave < self._budget.max_iterations:
             if time.monotonic() - started > self._budget.max_wall_clock_seconds:
                 log.warning("scheduler_walltime_exhausted", wave=wave)
-                break
+                return wave, tool_calls, True
 
-            self._engine.expand(state, graph, wave)
+            self._engine.expand(state, graph, wave + 1)
             ready = graph.ready()
             if not ready:
-                break  # converged: no runnable tasks and nothing retryable
+                return wave, tool_calls, False  # converged
 
             budget_left = self._budget.max_tool_calls - tool_calls
             if budget_left <= 0:
                 log.warning("scheduler_toolcall_budget_exhausted", wave=wave)
-                break
+                return wave, tool_calls, True
             ready = ready[:budget_left]
 
-            waves = wave
+            wave += 1
             for t in ready:
                 t.status = TaskStatus.RUNNING
                 t.attempts += 1
 
             results = await asyncio.gather(
-                *(self._run_one(state, t) for t in ready))
+                *(self._execute(state, t.tool, t.params) for t in ready))
             tool_calls += len(ready)
 
             for task, (ok, outcome, duration_ms, _started_at) in zip(
@@ -86,10 +134,4 @@ class PriorityScheduler:
                 else:
                     task.status = TaskStatus.FAILED
 
-        done, total = graph.progress()
-        log.info("scheduler_complete", waves=waves, tool_calls=tool_calls,
-                 tasks_done=done, tasks_total=total)
-        return SchedulerResult(graph, waves, tool_calls)
-
-    async def _run_one(self, state: InvestigationState, task: Task):
-        return await self._execute(state, task.tool, task.params)
+        return wave, tool_calls, True  # hit iteration cap

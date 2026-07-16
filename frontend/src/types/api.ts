@@ -184,6 +184,12 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface ReflectionFinding {
+  category: "coverage" | "gap" | "unverified" | "contradiction" | string;
+  detail: string;
+  action_recommended: string;
+}
+
 export interface PlanNode {
   id: string;
   tool: string;
@@ -267,6 +273,7 @@ export interface InvestigationPackage {
   business_impact: BusinessImpact | null;
   root_cause: RootCause | null;
   plan_graph: PlanNode[];
+  reflections: ReflectionFinding[];
   created_at: string;
   completed_at?: string | null;
 }

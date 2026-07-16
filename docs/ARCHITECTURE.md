@@ -210,6 +210,23 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Reflection loop (self-review)
+
+`agents/reflection.py` gives every investigation a senior-analyst self-review.
+After collection converges the engine (stateless, deterministic — auditable like
+the planner) asks: was work left undone, was an obvious pivot missed, does a
+conclusion rest on a single unconfirmed source, do sources contradict?
+
+- Findings are categorized **coverage / gap / unverified / contradiction**.
+- `suggest(state)` returns follow-up actions the **PriorityScheduler** re-opens as
+  a task wave (e.g. hunt suspicious IOCs the planner skipped, or independently
+  verify a single-source malicious verdict in EDR); it re-drains and reflects
+  again until nothing new is proposed (confidence stabilizes) or the
+  reflection-round budget trips.
+- `review(state)` records the **residual** findings on every package
+  (`reflections`) — what an analyst should still scrutinize — for both the
+  batch and taskgraph strategies. Surfaced in the investigation overview.
+
 ### Specialist-agent framework
 
 Every analytic capability is a `SpecialistAgent` (`app/agents/specialists/`): a
