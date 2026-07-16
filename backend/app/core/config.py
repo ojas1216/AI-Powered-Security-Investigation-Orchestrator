@@ -123,6 +123,12 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1"
     ollama_model_fast: str = ""  # optional smaller local model for fast tier
 
+    # ── Semantic memory ───────────────────────────────────────────────────────
+    # embedder: "hashing" (offline, zero-dep, default) | "ollama" (local model)
+    embedder: str = "hashing"
+    embedding_dim: int = 256
+    embedding_model: str = "nomic-embed-text"
+
     # ── Ticketing ─────────────────────────────────────────────────────────────
     servicenow_instance: str = ""
     servicenow_user: str = ""

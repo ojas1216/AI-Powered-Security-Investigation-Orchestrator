@@ -46,13 +46,19 @@ log = get_logger("agents.loop")
 class AutonomousInvestigator:
     def __init__(self, *, toolbox: Toolbox, graph: GraphClient, memory: CaseMemory,
                  planner: Planner | None = None, budget: Budget | None = None,
-                 approvals: ApprovalService | None = None) -> None:
+                 approvals: ApprovalService | None = None,
+                 case_index=None) -> None:
         self.toolbox = toolbox
         self.graph = graph
         self.memory = memory
         self.planner = planner or Planner()
         self.budget = budget or Budget()
         self.approvals = approvals or build_approval_service()
+        if case_index is None:
+            from app.engines.semantic import build_case_index
+
+            case_index = build_case_index()
+        self.case_index = case_index
 
     async def investigate(self, tenant: str, alert: Alert,
                           investigation_id: str | None = None) -> InvestigationPackage:
@@ -211,6 +217,10 @@ class AutonomousInvestigator:
         pkg.completed_at = datetime.now(UTC)
         pkg.agent_trace = trace
         self.memory.remember(pkg)
+        try:
+            self.case_index.index_package(pkg)
+        except Exception as exc:  # noqa: BLE001 - indexing must never fail a case
+            log.warning("case_indexing_failed", error=str(exc))
 
     def _write_graph(self, pkg: InvestigationPackage) -> None:
         alert_node = f"alert:{pkg.alert.source_alert_id}"

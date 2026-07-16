@@ -12,6 +12,7 @@ from app.api.v1.routes import (
     hunts,
     investigations,
     iocs,
+    search,
 )
 
 api_router = APIRouter()
@@ -28,3 +29,4 @@ api_router.include_router(hunts.router, prefix="/hunts", tags=["hunts"])
 api_router.include_router(approvals.router, prefix="/approvals", tags=["approvals"])
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(graph.router, prefix="/graph", tags=["graph"])
+api_router.include_router(search.router, prefix="/search", tags=["search"])

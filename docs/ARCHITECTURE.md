@@ -128,6 +128,23 @@ PENDING ──approve──▶ APPROVED ──mark executed──▶ EXECUTED
 - API: `GET /api/v1/approvals`, `POST /api/v1/approvals/{id}/decision`,
   `POST /api/v1/approvals/{id}/executed`. The package carries `approval_ids`.
 
+### Semantic memory & natural-language search
+
+`engines/semantic/` embeds every completed case and searches them in natural
+language ("credential phishing against finance"). Complements — does not replace
+— the exact IOC-overlap recall in `agents/memory.py`:
+
+- **Offline-first embedder**: the default `HashingEmbedder` needs no model and no
+  network — signed feature-hashing over word + char-trigram tokens, deterministic
+  (blake2b), fully air-gap-capable and hermetic for tests. `AEGIS_EMBEDDER=ollama`
+  swaps in a local embedding model (e.g. `nomic-embed-text`) behind the same
+  interface.
+- **Vector store**: tenant-partitioned in-memory cosine search by default;
+  ChromaDB (already in the stack) drops in behind the `VectorStore` interface.
+- **Index-on-finalize**: the loop indexes each case after `memory.remember`
+  (failure never breaks a case). `POST /api/v1/search/cases` runs NL search
+  (RBAC: `investigation:read`), tenant-isolated.
+
 ### Knowledge graph (write + query)
 
 The investigation loop writes a tenant-isolated entity graph (`alert`/`host`/
