@@ -37,19 +37,25 @@ class DossierEngine:
         from app.engines.threat_intel.connectors.threatfox import (
             build_threatfox_connector,
         )
+        from app.engines.threat_intel.dossier_sources import build_dossier_connectors
 
         self._aggregator = build_aggregator()
         self._threatfox = build_threatfox_connector()
+        self._connectors = build_dossier_connectors()
         self._domain = build_domain_intel()
 
     async def build(self, indicator: str, tenant: str) -> ThreatIntelligenceDossier:
         ioc = classify(indicator)
         d = ThreatIntelligenceDossier(indicator=ioc.value, ioc_type=ioc.type)
 
-        # --- parallel enrichment (each source failure-isolated) -------------
+        # --- parallel enrichment (every source failure-isolated) -----------
+        import asyncio
+
         enriched = await self._aggregator.enrich_one(ioc)
         tfox = await self._safe(self._threatfox.enrich(ioc), "threatfox.enrich")
         tfox_verdict = await self._safe(self._threatfox.lookup(ioc), "threatfox.lookup")
+        extra = await asyncio.gather(
+            *(self._safe(c.enrich(ioc), c.name) for c in self._connectors))
 
         providers: list[ProviderResult] = [
             ProviderResult(source=s.source, verdict=s.verdict, confidence=s.score,
@@ -63,12 +69,17 @@ class DossierEngine:
                 malware_family=tfox.malware_printable or tfox.malware,
                 threat_category=tfox.threat_type, tags=tfox.tags,
                 references=tfox.reference, detail=tfox.threat_description))
+        providers += [r for r in extra if r is not None]
         d.threat_intel = providers
 
         # --- fuse verdict + confidence (reuse aggregator fusion) ------------
         all_sources: list[SourceVerdict] = list(enriched.sources)
         if tfox_verdict is not None:
             all_sources.append(tfox_verdict)
+        all_sources += [
+            SourceVerdict(source=r.source, verdict=r.verdict, score=r.confidence)
+            for r in extra if r is not None and r.verdict is not Verdict.UNKNOWN
+        ]
         verdict, confidence = fuse_verdicts(all_sources)
         d.verdict = verdict
         d.risk_score = round(confidence * 100, 1)
@@ -87,6 +98,8 @@ class DossierEngine:
         # --- MITRE + predicted path ----------------------------------------
         d.mitre = self._mitre(ioc, tfox, verdict)
 
+        families = sorted({p.malware_family for p in providers if p.malware_family})
+
         # --- attribution (type only, never a named group) ------------------
         from app.engines.campaign import build_attribution_engine
 
@@ -94,7 +107,7 @@ class DossierEngine:
             techniques={t.technique_id for t in d.mitre.techniques},
             tactics={t.tactic for t in d.mitre.techniques},
             infra_count=1 if ioc.type in _NETWORK else 0,
-            malware_count=1 if (tfox and (tfox.malware or tfox.malware_printable)) else 0,
+            malware_count=1 if families else 0,
             identity_count=1 if ioc.type is IOCType.EMAIL else 0, host_count=0)
 
         # --- campaign correlation against stored incidents -----------------
@@ -102,6 +115,9 @@ class DossierEngine:
 
         # --- relationships (ThreatFox related + campaigns + graph) ---------
         d.relationships = self._relationships(ioc, tfox, tenant, d.campaign_matches)
+        for fam in families:
+            if fam not in d.relationships.threat_actors:
+                d.relationships.threat_actors.append(fam)
 
         # --- timeline -------------------------------------------------------
         if tfox:
