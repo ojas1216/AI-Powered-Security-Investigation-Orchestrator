@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Plus, Search } from "lucide-react";
-import { useInvestigations, useIngestAlert } from "@/hooks/useInvestigations";
+import { Loader2, Plus, Search, Upload } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useInvestigations, useIngestAlert, investigationKeys } from "@/hooks/useInvestigations";
+import { fileToBase64, ingestFile } from "@/services/platform";
 import { useAuthStore } from "@/stores/auth";
 import { SAMPLE_ALERTS } from "@/lib/sampleAlerts";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -15,8 +17,27 @@ export function AlertsPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useInvestigations();
   const ingest = useIngestAlert();
+  const qc = useQueryClient();
   const canIngest = useAuthStore((s) => s.can("alert:ingest"));
   const [q, setQ] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  async function onFile(file: File) {
+    setUploading(true);
+    setUploadError("");
+    try {
+      const b64 = await fileToBase64(file);
+      const pkg = await ingestFile(file.name, b64);
+      qc.invalidateQueries({ queryKey: investigationKeys.all });
+      navigate(`/investigations/${pkg.investigation_id}`);
+    } catch {
+      setUploadError("Could not parse that file (.eml / .xml / .json / .csv / .txt).");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const rows = useMemo(() => {
     const list = (data ?? []).map((inv) => ({ inv, a: inv.alert }));
@@ -37,25 +58,44 @@ export function AlertsPage() {
         title="Alerts"
         description="Inbound detections normalized into the common schema"
         actions={
-          canIngest &&
-          SAMPLE_ALERTS.map((s) => (
-            <Button
-              key={s.id}
-              variant="secondary"
-              size="sm"
-              disabled={ingest.isPending}
-              onClick={() =>
-                ingest.mutate(s.payload, {
-                  onSuccess: (pkg) => navigate(`/investigations/${pkg.investigation_id}`),
-                })
-              }
-            >
-              {ingest.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {s.label}
-            </Button>
-          ))
+          canIngest && (
+            <>
+              {SAMPLE_ALERTS.map((s) => (
+                <Button
+                  key={s.id}
+                  variant="secondary"
+                  size="sm"
+                  disabled={ingest.isPending}
+                  onClick={() =>
+                    ingest.mutate(s.payload, {
+                      onSuccess: (pkg) => navigate(`/investigations/${pkg.investigation_id}`),
+                    })
+                  }
+                >
+                  {ingest.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {s.label}
+                </Button>
+              ))}
+              <Button size="sm" disabled={uploading} onClick={() => fileInput.current?.click()}>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Upload artifact
+              </Button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".eml,.msg,.xml,.json,.csv,.tsv,.txt"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </>
+          )
         }
       />
+      {uploadError && <p className="mb-3 text-sm text-critical">{uploadError}</p>}
 
       <div className="mb-4 flex items-center gap-2">
         <div className="relative max-w-sm flex-1">

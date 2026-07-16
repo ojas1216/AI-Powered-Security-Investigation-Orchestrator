@@ -10,6 +10,9 @@ import { InvestigationDetailPage } from "@/pages/InvestigationDetail";
 import { CasesPage } from "@/pages/Cases";
 import { ThreatIntelPage } from "@/pages/ThreatIntel";
 import { IocReportPage } from "@/pages/IocReport";
+import { AgentConsolePage } from "@/pages/AgentConsole";
+import { CaseSearchPage } from "@/pages/CaseSearch";
+import { OfflineKbPage } from "@/pages/OfflineKb";
 import { EvidenceVaultPage } from "@/pages/EvidenceVault";
 import { TimelinePage } from "@/pages/Timeline";
 import { AttackGraphPage } from "@/pages/AttackGraph";
@@ -35,6 +38,9 @@ export function AppRoutes() {
           <Route path="/cases" element={<CasesPage />} />
           <Route path="/threat-intel" element={<ThreatIntelPage />} />
           <Route path="/ioc-report" element={<IocReportPage />} />
+          <Route path="/agents" element={<AgentConsolePage />} />
+          <Route path="/case-search" element={<CaseSearchPage />} />
+          <Route path="/offline-kb" element={<OfflineKbPage />} />
           <Route path="/evidence" element={<EvidenceVaultPage />} />
           <Route path="/timeline" element={<TimelinePage />} />
           <Route path="/graph" element={<AttackGraphPage />} />

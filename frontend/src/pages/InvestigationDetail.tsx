@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileJson, FileText, Printer, ShieldCheck, Ticket, Trash2 } from "lucide-react";
+import { ArrowLeft, FileJson, FileText, GitBranch, Printer, ShieldCheck, Ticket, TrendingUp, Trash2 } from "lucide-react";
 import { useInvestigation } from "@/hooks/useInvestigations";
 import { useAuthStore } from "@/stores/auth";
 import { useNotesStore } from "@/stores/notes";
@@ -21,6 +21,7 @@ import { MitreMatrix } from "@/components/mitre/MitreMatrix";
 import { AgentTrace } from "@/components/investigation/AgentTrace";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
+import { runAgent } from "@/services/platform";
 import type { InvestigationPackage } from "@/types/api";
 
 export function InvestigationDetailPage() {
@@ -71,7 +72,10 @@ export function InvestigationDetailPage() {
           </Card>
         </TabsContent>
         <TabsContent value="detections">
-          <DetectionsPanel detections={pkg.detections ?? []} />
+          <div className="space-y-4">
+            <RuleExport pkg={pkg} />
+            <DetectionsPanel detections={pkg.detections ?? []} />
+          </div>
         </TabsContent>
         <TabsContent value="timeline">
           <Card>
@@ -118,6 +122,58 @@ function Overview({ pkg }: { pkg: InvestigationPackage }) {
         <div className="lg:col-span-3">
           <RelatedCases cases={pkg.related_investigations} />
         </div>
+      )}
+
+      {pkg.business_impact && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <TrendingUp className="h-4 w-4 text-high" /> Business Impact
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            <div className="flex items-center gap-2">
+              <SeverityBadge severity={pkg.business_impact.level} />
+              <span className="text-sm text-fg">{pkg.business_impact.estimated_cost_band}</span>
+            </div>
+            <div className="text-xs text-fg-subtle">
+              Blast radius: {pkg.business_impact.blast_radius_hosts} host(s),{" "}
+              {pkg.business_impact.blast_radius_users} user(s)
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {pkg.business_impact.affected_asset_classes.map((c) => (
+                <span key={c} className="rounded bg-[#172033] px-1.5 py-0.5 text-xs text-fg-subtle">{c}</span>
+              ))}
+            </div>
+            <div className="text-xs text-fg-subtle">Downtime: {pkg.business_impact.downtime_risk}</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {pkg.root_cause && (
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <GitBranch className="h-4 w-4 text-info" /> Root Cause
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            <div className="text-sm text-fg">
+              Initial vector: <span className="font-medium">{pkg.root_cause.initial_vector}</span>
+            </div>
+            {pkg.root_cause.kill_chain.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 text-xs text-fg-subtle">
+                {pkg.root_cause.kill_chain.map((t, i) => (
+                  <span key={t} className="flex items-center gap-1">
+                    <span className="rounded bg-[#172033] px-1.5 py-0.5">{t}</span>
+                    {i < pkg.root_cause!.kill_chain.length - 1 && <span>→</span>}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-fg-subtle">{pkg.root_cause.narrative}</p>
+          </CardContent>
+        </Card>
       )}
       <Card className="flex flex-col items-center justify-center gap-3 p-6">
         {pkg.risk ? <RiskMeter risk={pkg.risk} /> : <span className="text-fg-subtle">No risk score</span>}
@@ -188,6 +244,66 @@ function Field({ label, value }: { label: string; value: string }) {
       <div className="text-xs uppercase text-muted">{label}</div>
       <div className="text-fg">{value}</div>
     </div>
+  );
+}
+
+function RuleExport({ pkg }: { pkg: InvestigationPackage }) {
+  const [rule, setRule] = useState<{ kind: string; text: string } | null>(null);
+  const [busy, setBusy] = useState("");
+
+  async function gen(kind: "sigma" | "yara") {
+    setBusy(kind);
+    try {
+      if (kind === "sigma") {
+        const r = await runAgent("sigma_generator", {
+          title: pkg.alert.title,
+          iocs: pkg.iocs,
+          detections: pkg.detections,
+        });
+        setRule({ kind: "Sigma", text: String(r.data.sigma ?? "") });
+      } else {
+        const hashes = pkg.iocs
+          .filter((e) => ["sha256", "sha1", "md5"].includes(e.ioc.type))
+          .map((e) => e.ioc.value);
+        const r = await runAgent("yara_generator", {
+          rule_name: pkg.alert.source_alert_id,
+          hashes,
+          strings: [],
+        });
+        setRule({ kind: "YARA", text: String(r.data.yara ?? "") });
+      }
+    } catch {
+      setRule({ kind, text: "Generation failed." });
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm">Generate detection from this case</CardTitle>
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => gen("sigma")}>
+            {busy === "sigma" ? "…" : "Sigma"}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => gen("yara")}>
+            {busy === "yara" ? "…" : "YARA"}
+          </Button>
+        </div>
+      </CardHeader>
+      {rule && (
+        <CardContent className="pt-0">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs text-fg-subtle">{rule.kind} rule</span>
+            <CopyButton value={rule.text} />
+          </div>
+          <pre className="max-h-80 overflow-auto rounded-md border border-border bg-[#0d1526] p-3 text-xs text-fg-subtle">
+            {rule.text}
+          </pre>
+        </CardContent>
+      )}
+    </Card>
   );
 }
 

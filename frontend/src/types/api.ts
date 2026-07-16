@@ -167,6 +167,69 @@ export interface ApprovalRequest {
   execution_note?: string | null;
 }
 
+export interface BusinessImpact {
+  level: Severity;
+  blast_radius_hosts: number;
+  blast_radius_users: number;
+  affected_asset_classes: string[];
+  estimated_cost_band: string;
+  downtime_risk: string;
+  rationale: string[];
+}
+
+export interface RootCause {
+  initial_vector: string;
+  initial_event: TimelineEvent | null;
+  kill_chain: string[];
+  narrative: string;
+}
+
+export interface AgentInfo {
+  name: string;
+  description: string;
+  input_hint: Record<string, string>;
+}
+
+export interface AgentResult {
+  agent: string;
+  ok: boolean;
+  summary: string;
+  data: Record<string, unknown>;
+}
+
+export interface CaseSearchHit {
+  investigation_id: string;
+  title: string;
+  verdict: Verdict;
+  risk_score: number;
+  score: number;
+  snippet: string;
+}
+
+export interface CveRecord {
+  cve_id: string;
+  cvss: number;
+  severity: string;
+  summary: string;
+  references: string[];
+  cwe: string;
+}
+
+export interface AttackTechnique {
+  technique_id: string;
+  name: string;
+  tactic: string;
+}
+
+export interface DatasetStatus {
+  name: string;
+  records: number;
+  loaded_from: string;
+  source_url: string;
+  version: string;
+  refreshed_at: string | null;
+}
+
 export interface InvestigationPackage {
   investigation_id: string;
   tenant: string;
@@ -188,6 +251,8 @@ export interface InvestigationPackage {
   detections: DetectionMatch[];
   agent_trace: AgentTraceStep[];
   related_investigations: RelatedCase[];
+  business_impact: BusinessImpact | null;
+  root_cause: RootCause | null;
   created_at: string;
   completed_at?: string | null;
 }
