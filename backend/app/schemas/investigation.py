@@ -102,6 +102,43 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class PredictedAction(BaseModel):
+    """A likely next attacker move, with its probability and how to prevent it."""
+
+    tactic: str
+    technique_id: str
+    name: str
+    probability: float = Field(ge=0.0, le=1.0)
+    rationale: str = ""
+    preventative_action: str = ""
+
+
+class AttackPrediction(BaseModel):
+    """Forward-looking projection of the attack from the reconstructed path."""
+
+    current_stage: str = "reconnaissance"
+    predictions: list[PredictedAction] = Field(default_factory=list)
+    simulation: list[str] = Field(default_factory=list)
+
+
+class ResponseAction(BaseModel):
+    """A ranked, atomic response action with its impact and rollback profile."""
+
+    action: str
+    category: str  # network | identity | endpoint | email | escalation
+    target: str = ""
+    risk_reduction: float = Field(ge=0.0, le=1.0)
+    business_impact: str = "low"       # low | medium | high
+    operational_impact: str = "low"
+    difficulty: str = "low"            # low | medium | high
+    rollback: str = ""
+    requires_approval: bool = True
+
+
+class ResponsePlan(BaseModel):
+    actions: list[ResponseAction] = Field(default_factory=list)
+
+
 class Attribution(BaseModel):
     """Estimated threat-actor *type* — never a fabricated named group.
 
@@ -274,5 +311,7 @@ class InvestigationPackage(BaseModel):
     incident_dna: IncidentDNA | None = None
     dna_matches: list[FingerprintMatch] = Field(default_factory=list)
     attribution: Attribution | None = None
+    prediction: AttackPrediction | None = None
+    response_plan: ResponsePlan | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

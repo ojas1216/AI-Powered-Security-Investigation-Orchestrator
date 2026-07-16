@@ -210,6 +210,24 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Predictive attack path & response engine
+
+- **Prediction** (`engines/prediction/`): from the reconstructed kill chain
+  (root cause + observed tactics), a deterministic transition model over the
+  ATT&CK tactic ordering projects the attacker's likely **next moves** — each
+  with a probability (decaying with distance, boosted for endgame
+  exfiltration/impact), the technique, and a concrete **preventative control** —
+  plus a short attack simulation. Turns a backward investigation into forward
+  defense (`package.prediction`).
+- **Response engine** (`engines/response/`): ranked, atomic **response actions**
+  (block IP/domain/hash, quarantine device, reset/disable account, purge phishing
+  email, notify legal/compliance) derived from the evidence, each with estimated
+  **risk reduction, business + operational impact, difficulty and a rollback**.
+  Ranked by risk reduction per unit difficulty. It never auto-executes —
+  disruptive actions carry `requires_approval` and flow through the approval
+  workflow. This is the granular decision-support complement to the phase-based
+  `engines/playbook` (`package.response_plan`).
+
 ### Campaign detection & threat-actor attribution
 
 `engines/campaign/` correlates incidents into campaigns and estimates the

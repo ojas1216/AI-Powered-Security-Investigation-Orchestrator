@@ -289,6 +289,25 @@ class AutonomousInvestigator:
              f"{pkg.attribution.actor_type} "
              f"({pkg.attribution.confidence:.0%})")
 
+        # Predictive attack path: project the attacker's likely next moves + how
+        # to prevent them, turning the backward investigation into forward defense.
+        from app.engines.prediction import build_prediction_engine
+
+        pkg.prediction = build_prediction_engine().predict(
+            pkg.root_cause, pkg.mitre, pkg.overall_verdict)
+        note("predict_path", "Project likely next attacker actions from the "
+             "reconstructed kill chain",
+             f"stage={pkg.prediction.current_stage}, "
+             f"{len(pkg.prediction.predictions)} predicted move(s)")
+
+        # Response engine: ranked, atomic response actions with impact + rollback.
+        from app.engines.response import build_response_engine
+
+        pkg.response_plan = build_response_engine().plan(pkg)
+        note("response_plan", "Generate ranked response actions with business/"
+             "operational impact, risk reduction and rollback",
+             f"{len(pkg.response_plan.actions)} action(s)")
+
         # Self-review: record residual gaps/unverified conclusions/contradictions
         # after all collection (and any reflection-driven follow-ups) — every
         # investigation self-reviews, regardless of strategy.

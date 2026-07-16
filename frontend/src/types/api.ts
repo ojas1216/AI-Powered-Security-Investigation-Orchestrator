@@ -184,6 +184,37 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface PredictedAction {
+  tactic: string;
+  technique_id: string;
+  name: string;
+  probability: number;
+  rationale: string;
+  preventative_action: string;
+}
+
+export interface AttackPrediction {
+  current_stage: string;
+  predictions: PredictedAction[];
+  simulation: string[];
+}
+
+export interface ResponseAction {
+  action: string;
+  category: string;
+  target: string;
+  risk_reduction: number;
+  business_impact: string;
+  operational_impact: string;
+  difficulty: string;
+  rollback: string;
+  requires_approval: boolean;
+}
+
+export interface ResponsePlan {
+  actions: ResponseAction[];
+}
+
 export interface Attribution {
   actor_type: string;
   confidence: number;
@@ -345,6 +376,8 @@ export interface InvestigationPackage {
   incident_dna: IncidentDNA | null;
   dna_matches: FingerprintMatch[];
   attribution: Attribution | null;
+  prediction: AttackPrediction | null;
+  response_plan: ResponsePlan | null;
   created_at: string;
   completed_at?: string | null;
 }

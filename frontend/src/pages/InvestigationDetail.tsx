@@ -24,6 +24,8 @@ import { Reflections } from "@/components/investigation/Reflections";
 import { Consensus } from "@/components/investigation/Consensus";
 import { IncidentDna } from "@/components/investigation/IncidentDna";
 import { ActorBadge } from "@/components/investigation/ActorBadge";
+import { Prediction } from "@/components/investigation/Prediction";
+import { ResponsePlan } from "@/components/investigation/ResponsePlan";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
 import { runAgent } from "@/services/platform";
@@ -145,6 +147,18 @@ function Overview({ pkg }: { pkg: InvestigationPackage }) {
       {pkg.consensus && (
         <div className="lg:col-span-3">
           <Consensus consensus={pkg.consensus} />
+        </div>
+      )}
+
+      {pkg.response_plan && pkg.response_plan.actions.length > 0 && (
+        <div className="lg:col-span-2">
+          <ResponsePlan plan={pkg.response_plan} />
+        </div>
+      )}
+
+      {pkg.prediction && pkg.prediction.predictions.length > 0 && (
+        <div>
+          <Prediction prediction={pkg.prediction} />
         </div>
       )}
 
