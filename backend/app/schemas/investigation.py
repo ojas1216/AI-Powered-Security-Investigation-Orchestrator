@@ -102,6 +102,36 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class Attribution(BaseModel):
+    """Estimated threat-actor *type* — never a fabricated named group.
+
+    actor_type: apt | crimeware | ransomware | insider | hacktivist | botnet |
+    unattributed. Confidence is explicit and `unattributed` is returned when the
+    evidence is not distinctive enough (no fabrication).
+    """
+
+    actor_type: str = "unattributed"
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    rationale: list[str] = Field(default_factory=list)
+    signals: list[str] = Field(default_factory=list)
+
+
+class CampaignCluster(BaseModel):
+    """A cluster of incidents correlated into one campaign by shared DNA."""
+
+    campaign_id: str
+    members: list[str] = Field(default_factory=list)  # investigation_ids
+    size: int = 0
+    shared_infrastructure: list[str] = Field(default_factory=list)
+    shared_techniques: list[str] = Field(default_factory=list)
+    shared_malware: list[str] = Field(default_factory=list)
+    victims: list[str] = Field(default_factory=list)
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
+    verdict: Verdict = Verdict.UNKNOWN
+    attribution: Attribution = Field(default_factory=Attribution)
+
+
 class Fingerprint(BaseModel):
     """One typed fingerprint of an incident.
 
@@ -243,5 +273,6 @@ class InvestigationPackage(BaseModel):
     consensus: ConsensusResult | None = None
     incident_dna: IncidentDNA | None = None
     dna_matches: list[FingerprintMatch] = Field(default_factory=list)
+    attribution: Attribution | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

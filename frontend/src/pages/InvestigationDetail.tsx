@@ -23,6 +23,7 @@ import { PlanGraph } from "@/components/investigation/PlanGraph";
 import { Reflections } from "@/components/investigation/Reflections";
 import { Consensus } from "@/components/investigation/Consensus";
 import { IncidentDna } from "@/components/investigation/IncidentDna";
+import { ActorBadge } from "@/components/investigation/ActorBadge";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
 import { runAgent } from "@/services/platform";
@@ -49,6 +50,9 @@ export function InvestigationDetailPage() {
           <div className="flex items-center gap-2">
             <VerdictBadge verdict={pkg.overall_verdict} />
             {pkg.risk && <SeverityBadge severity={pkg.risk.severity} />}
+            {pkg.attribution && pkg.attribution.actor_type !== "unattributed" && (
+              <ActorBadge attribution={pkg.attribution} />
+            )}
           </div>
         }
       />

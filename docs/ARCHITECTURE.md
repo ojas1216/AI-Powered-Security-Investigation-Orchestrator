@@ -210,6 +210,23 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Campaign detection & threat-actor attribution
+
+`engines/campaign/` correlates incidents into campaigns and estimates the
+adversary type:
+
+- **Campaign clustering** reuses the Incident DNA fingerprints: incidents whose
+  fingerprints overlap above a threshold are linked, and connected components
+  (union-find) are campaigns. Each cluster aggregates shared infrastructure / TTP
+  / malware, the victim set, a time window and worst verdict. Served at
+  `GET /campaigns` and `/campaigns/for/{id}` (tenant-isolated).
+- **Attribution** estimates the actor *type* only — apt / crimeware / ransomware
+  / insider / hacktivist / botnet — from the TTP/infra/malware profile, with an
+  explicit confidence and the signals behind it. It **never names a group** and
+  returns `unattributed` when the evidence is not distinctive (no fabrication).
+  Applied per-incident (`package.attribution`, on the investigation header) and
+  per-campaign.
+
 ### Incident DNA (fingerprints)
 
 `engines/fingerprint/` computes **seven typed fingerprints** of every

@@ -184,6 +184,27 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface Attribution {
+  actor_type: string;
+  confidence: number;
+  rationale: string[];
+  signals: string[];
+}
+
+export interface CampaignCluster {
+  campaign_id: string;
+  members: string[];
+  size: number;
+  shared_infrastructure: string[];
+  shared_techniques: string[];
+  shared_malware: string[];
+  victims: string[];
+  first_seen: string | null;
+  last_seen: string | null;
+  verdict: Verdict;
+  attribution: Attribution;
+}
+
 export interface Fingerprint {
   kind: string;
   hash: string;
@@ -323,6 +344,7 @@ export interface InvestigationPackage {
   consensus: ConsensusResult | null;
   incident_dna: IncidentDNA | null;
   dna_matches: FingerprintMatch[];
+  attribution: Attribution | null;
   created_at: string;
   completed_at?: string | null;
 }

@@ -3,11 +3,19 @@ import type {
   AgentInfo,
   AgentResult,
   AttackTechnique,
+  CampaignCluster,
   CaseSearchHit,
   CveRecord,
   DatasetStatus,
   InvestigationPackage,
 } from "@/types/api";
+
+// ── Campaigns ────────────────────────────────────────────────────────────────
+
+export async function listCampaigns(): Promise<CampaignCluster[]> {
+  const { data } = await http.get<CampaignCluster[]>("/campaigns");
+  return data;
+}
 
 // ── Specialist agents ────────────────────────────────────────────────────────
 

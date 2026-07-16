@@ -271,6 +271,24 @@ class AutonomousInvestigator:
              "and compare against prior incidents",
              f"{len(pkg.dna_matches)} fingerprint match(es)")
 
+        # Threat-actor-type attribution from this incident's own TTP/infra/malware
+        # profile (never a fabricated named group; unattributed when weak).
+        from app.engines.campaign import build_attribution_engine
+
+        infra_fp = pkg.incident_dna.by_kind("infrastructure")
+        malware_fp = pkg.incident_dna.by_kind("malware")
+        pkg.attribution = build_attribution_engine().attribute(
+            techniques={t.technique_id for t in pkg.mitre},
+            tactics={t.tactic for t in pkg.mitre},
+            infra_count=len(infra_fp.features) if infra_fp else 0,
+            malware_count=len(malware_fp.features) if malware_fp else 0,
+            identity_count=len(pkg.affected_users),
+            host_count=len(pkg.affected_hosts))
+        note("attribution", "Estimate threat-actor type from the TTP/infra/malware "
+             "profile (type only, never a named group)",
+             f"{pkg.attribution.actor_type} "
+             f"({pkg.attribution.confidence:.0%})")
+
         # Self-review: record residual gaps/unverified conclusions/contradictions
         # after all collection (and any reflection-driven follow-ups) — every
         # investigation self-reviews, regardless of strategy.

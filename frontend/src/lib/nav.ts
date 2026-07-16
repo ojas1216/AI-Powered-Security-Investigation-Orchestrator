@@ -41,6 +41,7 @@ export const NAV: NavItem[] = [
   { to: "/evidence", label: "Evidence Vault", icon: Archive },
   { to: "/timeline", label: "Timeline", icon: Clock },
   { to: "/graph", label: "Attack Graph", icon: Share2 },
+  { to: "/campaigns", label: "Campaigns", icon: Boxes },
   { to: "/mitre", label: "MITRE ATT&CK", icon: Grid3x3 },
   { to: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { to: "/reports", label: "Reports", icon: FileText },
