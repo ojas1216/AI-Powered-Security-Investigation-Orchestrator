@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Gauge,
   BellRing,
   ClipboardCheck,
   Microscope,
@@ -30,6 +31,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/executive", label: "Executive", icon: Gauge },
   { to: "/alerts", label: "Alerts", icon: BellRing },
   { to: "/investigations", label: "Investigations", icon: Microscope },
   { to: "/cases", label: "Cases", icon: FolderKanban },

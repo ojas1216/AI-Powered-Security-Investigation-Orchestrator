@@ -14,6 +14,7 @@ import { AgentConsolePage } from "@/pages/AgentConsole";
 import { CaseSearchPage } from "@/pages/CaseSearch";
 import { OfflineKbPage } from "@/pages/OfflineKb";
 import { CampaignsPage } from "@/pages/Campaigns";
+import { ExecutivePage } from "@/pages/Executive";
 import { EvidenceVaultPage } from "@/pages/EvidenceVault";
 import { TimelinePage } from "@/pages/Timeline";
 import { AttackGraphPage } from "@/pages/AttackGraph";
@@ -43,6 +44,7 @@ export function AppRoutes() {
           <Route path="/case-search" element={<CaseSearchPage />} />
           <Route path="/offline-kb" element={<OfflineKbPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/executive" element={<ExecutivePage />} />
           <Route path="/evidence" element={<EvidenceVaultPage />} />
           <Route path="/timeline" element={<TimelinePage />} />
           <Route path="/graph" element={<AttackGraphPage />} />

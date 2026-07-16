@@ -210,6 +210,19 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Executive intelligence
+
+`engines/executive/` aggregates a board-level view across the tenant's
+investigations (read-only; no new storage): investigation volume + verdict mix,
+**false-positive rate**, **business risk** + average risk, **financial exposure**
+band + high-impact count, **estimated MTTR**, **AI time saved** + analyst
+productivity multiplier (vs a manual-triage baseline), **active campaigns**,
+**top threat-actor types**, **departments affected** (host classification),
+**compliance impact** flags (SOX/PCI, GDPR/CCPA, crown-jewel), and a **risk
+trend** bucketed by day. Served at `GET /executive/summary?window_days=N`
+(investigation:read, tenant-isolated) and rendered as the Executive dashboard
+(stat tiles + risk-trend area chart + actor/department/compliance panels).
+
 ### Multi-format detection engineering
 
 `engines/detection_export/` turns an investigation's confirmed indicators into

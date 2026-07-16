@@ -184,6 +184,44 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface ActorCount {
+  actor_type: string;
+  count: number;
+}
+
+export interface DepartmentCount {
+  department: string;
+  incidents: number;
+}
+
+export interface RiskTrendPoint {
+  period: string;
+  avg_risk: number;
+  count: number;
+}
+
+export interface ExecutiveSummary {
+  generated_at: string;
+  window_days: number;
+  investigation_volume: number;
+  malicious_count: number;
+  suspicious_count: number;
+  benign_count: number;
+  false_positive_rate: number;
+  business_risk: string;
+  average_risk_score: number;
+  financial_exposure_band: string;
+  high_impact_incidents: number;
+  estimated_mttr_minutes: number;
+  ai_time_saved_hours: number;
+  analyst_productivity_multiplier: number;
+  active_campaigns: number;
+  top_threat_actors: ActorCount[];
+  departments_affected: DepartmentCount[];
+  compliance_impact: string[];
+  risk_trend: RiskTrendPoint[];
+}
+
 export interface GeneratedRule {
   format: string;
   title: string;

@@ -8,6 +8,7 @@ from app.api.v1.routes import (
     campaigns,
     copilot,
     detections,
+    executive,
     fingerprints,
     graph,
     health,
@@ -37,3 +38,4 @@ api_router.include_router(offline.router, prefix="/offline", tags=["offline"])
 api_router.include_router(fingerprints.router, prefix="/fingerprints",
                           tags=["fingerprints"])
 api_router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"])
+api_router.include_router(executive.router, prefix="/executive", tags=["executive"])

@@ -7,9 +7,19 @@ import type {
   CaseSearchHit,
   CveRecord,
   DatasetStatus,
+  ExecutiveSummary,
   GeneratedRule,
   InvestigationPackage,
 } from "@/types/api";
+
+// ── Executive intelligence ───────────────────────────────────────────────────
+
+export async function executiveSummary(windowDays = 30): Promise<ExecutiveSummary> {
+  const { data } = await http.get<ExecutiveSummary>("/executive/summary", {
+    params: { window_days: windowDays },
+  });
+  return data;
+}
 
 // ── Multi-format detection export ────────────────────────────────────────────
 
