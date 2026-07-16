@@ -128,6 +128,22 @@ PENDING ──approve──▶ APPROVED ──mark executed──▶ EXECUTED
 - API: `GET /api/v1/approvals`, `POST /api/v1/approvals/{id}/decision`,
   `POST /api/v1/approvals/{id}/executed`. The package carries `approval_ids`.
 
+### Knowledge graph (write + query)
+
+The investigation loop writes a tenant-isolated entity graph (`alert`/`host`/
+`user`/IOC nodes). `engines/graph/` now also **queries** it, with one interface
+implemented for both the offline in-memory back end and Neo4j (Cypher):
+
+- `neighbors(node, depth)` — N-hop subgraph for the Attack-Graph view
+- `campaign(node)` — alerts + entities that reuse an indicator (infrastructure-
+  reuse / campaign detection)
+- `path(src, dst)` — shortest relationship path (attack-path reconstruction)
+
+Exposed at `GET /api/v1/graph/{neighbors,campaign,path}` (RBAC:
+`investigation:read`), every query tenant-gated. The graph is a process-wide
+singleton so API reads see the loop's writes. Depth is hard-capped (6) so a
+query can't traverse the whole graph.
+
 ### Specialist-agent framework
 
 Every analytic capability is a `SpecialistAgent` (`app/agents/specialists/`): a
