@@ -52,6 +52,27 @@ class TicketRef(BaseModel):
     url: str | None = None
 
 
+class BusinessImpact(BaseModel):
+    """Estimated business impact of an investigation (deterministic model)."""
+
+    level: Severity
+    blast_radius_hosts: int = 0
+    blast_radius_users: int = 0
+    affected_asset_classes: list[str] = Field(default_factory=list)
+    estimated_cost_band: str = "$0"
+    downtime_risk: str = "none"
+    rationale: list[str] = Field(default_factory=list)
+
+
+class RootCause(BaseModel):
+    """Reconstructed origin + kill-chain of an investigation."""
+
+    initial_vector: str = "undetermined"
+    initial_event: TimelineEvent | None = None
+    kill_chain: list[str] = Field(default_factory=list)  # ordered ATT&CK tactics
+    narrative: str = ""
+
+
 class DetectionMatch(BaseModel):
     """A detection rule that fired on the ingested alert."""
 
@@ -115,5 +136,7 @@ class InvestigationPackage(BaseModel):
     analyst_report: str = ""
     agent_trace: list[AgentTraceStep] = Field(default_factory=list)
     related_investigations: list[RelatedCase] = Field(default_factory=list)
+    business_impact: BusinessImpact | None = None
+    root_cause: RootCause | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

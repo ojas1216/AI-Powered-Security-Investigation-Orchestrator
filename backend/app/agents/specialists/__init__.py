@@ -19,12 +19,21 @@ from app.agents.specialists.base import (
     AgentResult,
     SpecialistAgent,
 )
+from app.agents.specialists.generation import (
+    AttackPathAgent,
+    BusinessImpactAgent,
+    RootCauseAgent,
+    SigmaGeneratorAgent,
+    YaraGeneratorAgent,
+)
 
 __all__ = [
     "AgentInfo",
     "AgentOrchestrator",
     "AgentRegistry",
     "AgentResult",
+    "AttackPathAgent",
+    "BusinessImpactAgent",
     "DetectionAgent",
     "EdrHuntAgent",
     "EmailAgent",
@@ -32,9 +41,12 @@ __all__ = [
     "MemoryAgent",
     "MitreAgent",
     "RiskAgent",
+    "RootCauseAgent",
     "SandboxAgent",
+    "SigmaGeneratorAgent",
     "SpecialistAgent",
     "ThreatIntelAgent",
+    "YaraGeneratorAgent",
     "build_agent_bundle",
 ]
 
@@ -55,6 +67,11 @@ class AgentBundle:
         mitre: MitreAgent,
         risk: RiskAgent,
         memory: MemoryAgent,
+        sigma_generator: SigmaGeneratorAgent,
+        yara_generator: YaraGeneratorAgent,
+        root_cause: RootCauseAgent,
+        attack_path: AttackPathAgent,
+        business_impact: BusinessImpactAgent,
     ) -> None:
         self.ioc_extraction = ioc_extraction
         self.threat_intel = threat_intel
@@ -65,12 +82,19 @@ class AgentBundle:
         self.mitre = mitre
         self.risk = risk
         self.memory = memory
+        self.sigma_generator = sigma_generator
+        self.yara_generator = yara_generator
+        self.root_cause = root_cause
+        self.attack_path = attack_path
+        self.business_impact = business_impact
 
     def registry(self) -> AgentRegistry:
         reg = AgentRegistry()
         for agent in (self.ioc_extraction, self.threat_intel, self.detection,
                       self.edr_hunt, self.sandbox, self.email, self.mitre,
-                      self.risk, self.memory):
+                      self.risk, self.memory, self.sigma_generator,
+                      self.yara_generator, self.root_cause, self.attack_path,
+                      self.business_impact):
             reg.register(agent)
         return reg
 
@@ -81,10 +105,10 @@ class AgentBundle:
 def build_agent_bundle() -> AgentBundle:
     """Compose specialists from the standard engine builders."""
     from app.agents.memory import build_case_memory
-    from app.engines.copilot import build_copilot  # noqa: F401 (kept for parity)
     from app.engines.detection import build_detection_engine, build_rule_store
     from app.engines.edr import build_edr
     from app.engines.email_investigation import build_email
+    from app.engines.graph import build_graph
     from app.engines.sandbox import build_sandbox
     from app.engines.threat_intel import build_aggregator
 
@@ -98,6 +122,11 @@ def build_agent_bundle() -> AgentBundle:
         mitre=MitreAgent(),
         risk=RiskAgent(),
         memory=MemoryAgent(build_case_memory()),
+        sigma_generator=SigmaGeneratorAgent(),
+        yara_generator=YaraGeneratorAgent(),
+        root_cause=RootCauseAgent(),
+        attack_path=AttackPathAgent(build_graph()),
+        business_impact=BusinessImpactAgent(),
     )
 
 

@@ -181,6 +181,23 @@ class AutonomousInvestigator:
         note("score_risk", "Fuse TI/sandbox/EDR/ATT&CK/asset factors into 0-100 risk",
              f"risk={pkg.risk.score:.0f} verdict={pkg.overall_verdict.value}")
 
+        # Root cause (kill-chain origin) and business impact — deterministic,
+        # grounded in the case's own timeline/graph/blast-radius.
+        from app.agents.specialists import get_agent_bundle
+
+        bundle = get_agent_bundle()
+        pkg.root_cause = bundle.root_cause.analyze(pkg.timeline, pkg.mitre)
+        pkg.business_impact = bundle.business_impact.analyze(
+            affected_hosts=pkg.affected_hosts,
+            affected_users=pkg.affected_users,
+            verdict=pkg.overall_verdict,
+            risk_score=pkg.risk.score,
+        )
+        note("assess_impact",
+             "Reconstruct root cause + estimate business impact",
+             f"origin={pkg.root_cause.initial_vector}; "
+             f"impact={pkg.business_impact.level.value}")
+
         pkg.related_investigations = self.memory.recall(
             pkg.tenant,
             {e.ioc.key() for e in pkg.iocs},

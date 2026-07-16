@@ -35,8 +35,12 @@ def test_registry_rejects_duplicates_and_non_async():
 def test_bundle_exposes_all_capabilities():
     catalog = {a.name for a in build_agent_bundle().orchestrator().catalog()}
     assert catalog == {
+        # engine-wrapping agents
         "ioc_extraction", "threat_intel", "detection", "edr_hunt", "sandbox",
         "email", "mitre", "risk", "memory",
+        # generation & higher-order analytic agents
+        "sigma_generator", "yara_generator", "root_cause", "attack_path",
+        "business_impact",
     }
 
 

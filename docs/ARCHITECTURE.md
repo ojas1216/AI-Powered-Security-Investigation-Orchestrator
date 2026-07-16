@@ -176,6 +176,12 @@ tenant) -> AgentResult` contract and discovery metadata. Agents:
 - **Independently callable**: `GET /api/v1/agents` lists the catalog;
   `POST /api/v1/agents/{name}/run` invokes any single agent (RBAC: `agent:run`).
   Useful for ad-hoc analysis and external orchestration without a full case.
+- **Generation & analytic agents** (`generation.py`): `sigma_generator`,
+  `yara_generator`, `root_cause`, `attack_path`, `business_impact`. Deliberately
+  **deterministic and grounded** in the case's own evidence — an LLM-invented
+  detection rule is a liability, not an asset. `root_cause` (kill-chain origin)
+  and `business_impact` (blast radius / asset class / cost band) are also wired
+  into every investigation package at finalize.
 - **Auditable by design**: agents are stateless and take `tenant` explicitly;
   action *selection* stays in the deterministic planner, so LLM/agent output can
   never steer which agents run.
