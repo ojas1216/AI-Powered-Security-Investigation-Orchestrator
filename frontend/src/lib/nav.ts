@@ -36,7 +36,7 @@ export const NAV: NavItem[] = [
   { to: "/investigations", label: "Investigations", icon: Microscope },
   { to: "/cases", label: "Cases", icon: FolderKanban },
   { to: "/threat-intel", label: "Threat Intelligence", icon: ShieldAlert },
-  { to: "/ioc-report", label: "IOC Report", icon: ScanSearch },
+  { to: "/ioc-report", label: "IOC Dossier", icon: ScanSearch },
   { to: "/case-search", label: "Case Search", icon: ScanSearch },
   { to: "/agents", label: "Agent Console", icon: Boxes },
   { to: "/offline-kb", label: "Offline KB", icon: Database },

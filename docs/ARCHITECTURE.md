@@ -322,6 +322,31 @@ conclusion rest on a single unconfirmed source, do sources contradict?
   (`reflections`) — what an analyst should still scrutinize — for both the
   batch and taskgraph strategies. Surfaced in the investigation overview.
 
+### Threat-intelligence dossier engine
+
+`engines/threat_intel/dossier.py` turns a single indicator into a complete
+intelligence dossier (the enterprise replacement for a shallow reputation
+lookup), via a modular, failure-isolated pipeline: **classify → parallel
+enrichment (aggregator + ThreatFox) → DNS/WHOIS/hosting → confidence fusion →
+MITRE + predicted path → threat-actor-type attribution → campaign correlation
+(against stored Incident DNA) → relationships (+ graph) → business impact →
+executive summary**. Every step reuses an existing engine.
+
+- **IOC classifier** (`classifier.py`): defang-aware; recognizes IP/IPv6/CIDR,
+  domain, URL, email, SHA/MD5, JA3/JA4, ASN.
+- **ThreatFox connector** (`connectors/threatfox.py`): the primary source —
+  offline-first (bundled cache of representative entries powers enrichment +
+  regression tests with zero credentials) and online via the official
+  `search_ioc` API (`Auth-Key`) when `AEGIS_THREATFOX_API_KEY` is set, caching
+  responses for offline reuse. Plugs into the aggregator *and* exposes a rich
+  `enrich` (malware family, tags, first/last seen, reporter, references, related).
+- **DNS/WHOIS/hosting** (`domain_intel.py`): deterministic offline provider
+  (mock-first, hermetic) behind an interface a live provider can replace.
+- Dossier schema in `schemas/intel.py`; served at `POST /api/v1/intel/dossier`
+  (ioc:read, tenant-isolated). Rendered as the IOC Dossier page with sections
+  for overview, threat intel, DNS/WHOIS/hosting, MITRE, relationships, campaign
+  correlation, timeline, business impact and evidence.
+
 ### Specialist-agent framework
 
 Every analytic capability is a `SpecialistAgent` (`app/agents/specialists/`): a

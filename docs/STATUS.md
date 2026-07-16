@@ -6,7 +6,8 @@ Legend: ✅ implemented & tested · 🔌 interface + runnable mock (swap creds f
 |---|---------------------------------|--------|------------------------------------------------------|
 | 1 | Alert Ingestion Engine          | ✅/🔌  | Webhook+API done; Splunk/Sentinel/Elastic normalizers ✅; Kafka/syslog 🔌 |
 | 2 | IOC Extraction Engine           | ✅     | Full, RFC + defang aware, unit-tested                |
-| 3 | Threat-Intel Correlation        | ✅     | Aggregator + verdict fusion; VT/AbuseIPDB/GreyNoise/OTX/OpenCTI/MISP live connectors + respx tests ✅ |
+| 3 | Threat-Intel Correlation        | ✅     | Aggregator + verdict fusion; VT/AbuseIPDB/GreyNoise/OTX/OpenCTI/MISP/DShield/CIRCL/ThreatFox connectors + respx tests ✅ |
+| 3a| IOC Dossier Engine              | ✅     | Full TI dossier per IOC (classify→enrich→DNS/WHOIS/hosting→confidence→MITRE→attribution→campaign→relationships→impact); ThreatFox primary source (offline cache + online API); `/intel/dossier`; failure-isolated; tested ✅ |
 | 4 | Sandbox Automation              | ✅/🔌  | Base + mock + CAPEv2 live connector (submit/poll/report) + respx tests ✅; Joe/Falcon/Any.Run 🔌 |
 | 5 | EDR Investigation               | 🔌     | Base + mock telemetry; CRWD/S1/Defender/Wazuh 🔌     |
 | 6 | Email Investigation             | 🔌     | Base + mock; M365/Workspace/Mimecast/Proofpoint 🔌   |

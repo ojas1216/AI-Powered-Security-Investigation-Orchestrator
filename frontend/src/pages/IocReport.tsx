@@ -1,22 +1,13 @@
 /**
- * Full IOC report — the destination for a global-search lookup of a domain,
- * IP, hash, URL or email. Unlike the small Threat-Intel table, this assembles a
- * complete picture per indicator: fused verdict + confidence, every source's
- * individual verdict/score/detail, threat actors, sightings, on-host EDR
- * sightings, and related past investigations from long-term memory. One pivot,
- * one report.
+ * IOC Threat-Intelligence Dossier — the enterprise enrichment view. One
+ * indicator produces a complete dossier: overview, per-provider threat intel,
+ * DNS, WHOIS, hosting, MITRE, campaign correlation, relationships, timeline,
+ * business impact, evidence and references. Backed by POST /intel/dossier.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  AlertTriangle,
-  Crosshair,
-  History,
-  Loader2,
-  Search,
-  ShieldAlert,
-} from "lucide-react";
-import { runHunt, type HuntResult } from "@/services/hunts";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Download, Loader2, Search } from "lucide-react";
+import { getDossier } from "@/services/platform";
 import { useAudit } from "@/hooks/useAudit";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,22 +17,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { VerdictBadge } from "@/components/common/badges";
 import { CopyButton } from "@/components/common/CopyButton";
-import { RelatedCases } from "@/components/investigation/RelatedCases";
-import type { EnrichedIOC, Verdict } from "@/types/api";
-
-const VERDICT_RANK: Record<Verdict, number> = {
-  malicious: 0,
-  suspicious: 1,
-  unknown: 2,
-  benign: 3,
-};
+import { ActorBadge } from "@/components/investigation/ActorBadge";
+import type { ThreatIntelligenceDossier } from "@/types/api";
 
 export function IocReportPage() {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
   const audit = useAudit();
   const [text, setText] = useState("");
-  const [result, setResult] = useState<HuntResult | null>(null);
+  const [d, setD] = useState<ThreatIntelligenceDossier | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ran, setRan] = useState("");
@@ -54,17 +37,12 @@ export function IocReportPage() {
       setError("");
       setRan(q);
       try {
-        const r = await runHunt({ text: q });
-        setResult(r);
-        audit("ioc.report", `${r.iocs.length} indicators`);
-      } catch (err: unknown) {
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        setError(
-          status === 422
-            ? "No valid indicator (IP, domain, URL, hash, or email) found in that input."
-            : "Lookup failed. Is the API reachable?",
-        );
-        setResult(null);
+        const res = await getDossier(q);
+        setD(res);
+        audit("ioc.dossier", res.indicator);
+      } catch {
+        setError("Could not build the dossier. Is the API reachable?");
+        setD(null);
       } finally {
         setBusy(false);
       }
@@ -73,7 +51,6 @@ export function IocReportPage() {
     [],
   );
 
-  // Deep-link from global search: /ioc-report?q=<indicator> prefills + auto-runs.
   useEffect(() => {
     const q = params.get("q");
     if (q) {
@@ -84,18 +61,22 @@ export function IocReportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const worst = useMemo<Verdict | null>(() => {
-    if (!result?.iocs.length) return null;
-    return result.iocs
-      .map((e) => e.verdict)
-      .sort((a, b) => VERDICT_RANK[a] - VERDICT_RANK[b])[0];
-  }, [result]);
+  function exportJson() {
+    if (!d) return;
+    const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dossier-${d.indicator}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div>
       <PageHeader
-        title="IOC Report"
-        description="Look up any IP, domain, URL, file hash, or email for a complete cross-source report."
+        title="IOC Dossier"
+        description="Complete threat-intelligence report for any IP, domain, URL, hash, email, ASN or CIDR."
       />
 
       <form
@@ -110,197 +91,253 @@ export function IocReportPage() {
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="8.8.8.8 · evil.com · hxxps://bad[.]link · <sha256> · user@corp.com"
+            placeholder="malware-c2.net · 45.155.205.99 · <sha256> · AS13335 · 10.0.0.0/24"
             className="pl-9"
             autoFocus
           />
         </div>
         <Button type="submit" disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Look up"}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Investigate"}
         </Button>
+        {d && (
+          <Button variant="secondary" onClick={exportJson} type="button">
+            <Download className="mr-1 h-4 w-4" /> Export
+          </Button>
+        )}
       </form>
 
       {error && <ErrorState message={error} onRetry={() => run(ran)} />}
-
-      {!error && !result && !busy && (
+      {!error && !d && !busy && (
         <EmptyState
-          icon={<Crosshair className="h-8 w-8" />}
-          title="Search an indicator"
-          description="Paste an IOC above, or use the global search (press / anywhere)."
+          title="Investigate an indicator"
+          description="Paste an IOC above, or use the global search (press ⌘K / Ctrl+K)."
         />
       )}
-
-      {busy && !result && (
+      {busy && !d && (
         <div className="flex items-center gap-2 p-8 text-sm text-fg-subtle">
-          <Loader2 className="h-4 w-4 animate-spin" /> Correlating {ran} across
-          threat intel, EDR, and case memory…
+          <Loader2 className="h-4 w-4 animate-spin" /> Building dossier for {ran}…
         </div>
       )}
 
-      {result && (
-        <div className="space-y-4">
-          {/* Verdict banner */}
-          <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
-              <div className="flex items-center gap-3">
-                <ShieldAlert
-                  className={
-                    "h-6 w-6 " +
-                    (worst === "malicious"
-                      ? "text-critical"
-                      : worst === "suspicious"
-                        ? "text-high"
-                        : "text-fg-subtle")
-                  }
-                />
-                <div>
-                  <div className="text-sm text-fg-subtle">
-                    Report for <span className="font-mono text-fg">{ran}</span>
-                  </div>
-                  <div className="text-lg font-semibold text-fg">
-                    {result.iocs.length} indicator{result.iocs.length !== 1 && "s"} ·{" "}
-                    {result.affected_hosts.length} affected host
-                    {result.affected_hosts.length !== 1 && "s"}
-                  </div>
-                </div>
-              </div>
-              {worst && <VerdictBadge verdict={worst} />}
-            </CardContent>
-          </Card>
+      {d && <Dossier d={d} />}
+    </div>
+  );
+}
 
-          {result.iocs.map((e, i) => (
-            <IndicatorReport
-              key={`${e.ioc.type}:${e.ioc.value}:${i}`}
-              enriched={e}
-              edrHits={result.edr_hits.filter(
-                (h) => h.ioc.value.toLowerCase() === e.ioc.value.toLowerCase(),
-              )}
-            />
-          ))}
-
-          {result.related_investigations.length > 0 && (
-            <RelatedCases cases={result.related_investigations} />
-          )}
-
-          <div className="flex justify-end">
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/threat-intel?q=${encodeURIComponent(ran)}`)}
-            >
-              <History className="mr-1 h-4 w-4" /> Open in Threat Intelligence
-            </Button>
+function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
+  return (
+    <div className="space-y-4">
+      {/* Overview */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="break-all font-mono text-lg text-fg">{d.indicator}</span>
+            <CopyButton value={d.indicator} />
+            <Badge tone="neutral">{d.ioc_type}</Badge>
+            <VerdictBadge verdict={d.verdict} />
+            <Badge tone="neutral">{d.status}</Badge>
+            {d.attribution && d.attribution.actor_type !== "unattributed" && (
+              <ActorBadge attribution={d.attribution} />
+            )}
           </div>
+          <p className="mt-2 text-sm text-fg-subtle">{d.executive_summary}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-fg-subtle">
+            <span>
+              risk <span className="font-semibold text-fg">{d.risk_score}/100</span>
+            </span>
+            <span>
+              confidence{" "}
+              <span className="font-semibold text-fg">
+                {Math.round(d.confidence.score * 100)}%
+              </span>
+            </span>
+            {d.classification && <span>classification {d.classification}</span>}
+          </div>
+          {d.confidence.rationale.length > 0 && (
+            <p className="mt-1 text-xs text-fg-subtle">
+              {d.confidence.rationale.join(" ")}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Threat intelligence */}
+      <Section title={`Threat Intelligence (${d.threat_intel.length} sources)`}>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border text-left text-xs uppercase text-fg-subtle">
+              <tr>
+                <th className="px-3 py-2 font-medium">Source</th>
+                <th className="px-3 py-2 font-medium">Verdict</th>
+                <th className="px-3 py-2 font-medium">Confidence</th>
+                <th className="px-3 py-2 font-medium">Malware</th>
+                <th className="px-3 py-2 font-medium">Category</th>
+                <th className="px-3 py-2 font-medium">Detail</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {d.threat_intel.map((p, i) => (
+                <tr key={`${p.source}:${i}`}>
+                  <td className="px-3 py-2 font-medium text-fg">{p.source}</td>
+                  <td className="px-3 py-2"><VerdictBadge verdict={p.verdict} /></td>
+                  <td className="px-3 py-2 text-fg-subtle">{Math.round(p.confidence * 100)}%</td>
+                  <td className="px-3 py-2 text-fg-subtle">{p.malware_family || "—"}</td>
+                  <td className="px-3 py-2 text-fg-subtle">{p.threat_category || "—"}</td>
+                  <td className="px-3 py-2 text-fg-subtle">{p.detail || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      </Section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {d.whois && (
+          <Section title="WHOIS">
+            <KV k="Registrar" v={d.whois.registrar} />
+            <KV k="Created" v={fmt(d.whois.created)} />
+            <KV k="Expires" v={fmt(d.whois.expires)} />
+            <KV k="Age" v={d.whois.age_days != null ? `${d.whois.age_days} days` : "—"} />
+            <KV k="TLD" v={d.whois.tld} />
+            <KV k="DNSSEC" v={d.whois.dnssec ? "enabled" : "disabled"} />
+            <KV k="Nameservers" v={d.whois.nameservers.join(", ")} />
+          </Section>
+        )}
+        {d.dns && (
+          <Section title="DNS Records">
+            {(["a", "aaaa", "mx", "txt", "ns", "cname"] as const).map((r) =>
+              d.dns![r].length ? (
+                <KV key={r} k={r.toUpperCase()} v={d.dns![r].join(", ")} />
+              ) : null,
+            )}
+          </Section>
+        )}
+        {d.hosting && (
+          <Section title="Hosting">
+            <KV k="ASN" v={d.hosting.asn} />
+            <KV k="ISP" v={d.hosting.isp} />
+            <KV k="Organization" v={d.hosting.organization} />
+            <KV k="Country" v={d.hosting.country} />
+            {d.hosting.cloud_provider && <KV k="Cloud" v={d.hosting.cloud_provider} />}
+          </Section>
+        )}
+        {d.mitre.techniques.length > 0 && (
+          <Section title="MITRE ATT&CK">
+            <div className="flex flex-wrap gap-1.5">
+              {d.mitre.techniques.map((t) => (
+                <Badge key={t.technique_id} tone="medium">
+                  {t.technique_id} · {t.name}
+                </Badge>
+              ))}
+            </div>
+            {d.mitre.predicted_next.length > 0 && (
+              <p className="mt-2 text-xs text-fg-subtle">
+                Predicted next: {d.mitre.predicted_next.join(" → ")}
+              </p>
+            )}
+          </Section>
+        )}
+      </div>
+
+      {(hasRel(d) || d.campaign_matches.length > 0) && (
+        <Section title="Relationships & Campaign Correlation">
+          <RelList label="Related IPs" items={d.relationships.related_ips} />
+          <RelList label="Related domains" items={d.relationships.related_domains} />
+          <RelList label="Related hashes" items={d.relationships.related_hashes} />
+          <RelList label="Threat actors / malware" items={d.relationships.threat_actors} />
+          {d.campaign_matches.length > 0 && (
+            <div className="mt-2 text-xs text-fg-subtle">
+              Correlates with {d.campaign_matches.length} prior incident(s):{" "}
+              {d.campaign_matches.map((m) => m.title || m.investigation_id).join(", ")}
+            </div>
+          )}
+        </Section>
+      )}
+
+      {(d.timeline.first_seen || d.timeline.events.length > 0) && (
+        <Section title="Timeline">
+          <KV k="First seen" v={fmt(d.timeline.first_seen)} />
+          <KV k="Last seen" v={fmt(d.timeline.last_seen)} />
+          {d.timeline.events.map((e, i) => (
+            <p key={i} className="text-xs text-fg-subtle">• {e}</p>
+          ))}
+        </Section>
+      )}
+
+      {d.business_impact && (
+        <Section title="Business Impact & Recommendations">
+          <KV k="Technical" v={d.business_impact.technical_impact} />
+          <KV k="Business" v={d.business_impact.business_impact} />
+          <KV k="Data exposure" v={d.business_impact.potential_data_exposure} />
+          <ul className="mt-2 space-y-1">
+            {d.business_impact.recommended_actions.map((a, i) => (
+              <li key={i} className="text-sm text-fg-subtle">→ {a}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {(d.evidence.length > 0 || d.references.length > 0) && (
+        <Section title="Evidence & References">
+          {d.evidence.map((e, i) => (
+            <p key={i} className="font-mono text-xs text-fg-subtle">{e}</p>
+          ))}
+          {d.references.map((r, i) => (
+            <a key={i} href={r} target="_blank" rel="noreferrer"
+               className="block truncate text-xs text-info hover:underline">
+              {r}
+            </a>
+          ))}
+        </Section>
       )}
     </div>
   );
 }
 
-function IndicatorReport({
-  enriched,
-  edrHits,
-}: {
-  enriched: EnrichedIOC;
-  edrHits: HuntResult["edr_hits"];
-}) {
-  const { ioc, verdict, confidence, sources, threat_actors, sightings } = enriched;
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Badge>{ioc.type}</Badge>
-          <span className="break-all font-mono text-sm text-fg">{ioc.value}</span>
-          <CopyButton value={ioc.value} />
-        </CardTitle>
-        <div className="flex items-center gap-2">
-          <VerdictBadge verdict={verdict} />
-          <span className="text-xs text-fg-subtle">
-            {Math.round(confidence * 100)}% confidence
-          </span>
-        </div>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 pt-0">
-        {/* Per-source verdicts */}
-        <div>
-          <div className="mb-1.5 text-xs font-semibold uppercase text-fg-subtle">
-            Sources ({sources.length})
-          </div>
-          {sources.length ? (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border text-left text-xs uppercase text-fg-subtle">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Source</th>
-                    <th className="px-3 py-2 font-medium">Verdict</th>
-                    <th className="px-3 py-2 font-medium">Score</th>
-                    <th className="px-3 py-2 font-medium">Detail</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {sources.map((s, i) => (
-                    <tr key={`${s.source}:${i}`}>
-                      <td className="px-3 py-2 font-medium text-fg">{s.source}</td>
-                      <td className="px-3 py-2">
-                        <VerdictBadge verdict={s.verdict} />
-                      </td>
-                      <td className="px-3 py-2 text-fg-subtle">
-                        {Math.round(s.score * 100)}
-                      </td>
-                      <td className="px-3 py-2 text-fg-subtle">{s.detail ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-xs text-fg-subtle">
-              No source returned a verdict for this indicator.
-            </p>
-          )}
-        </div>
-
-        {/* Threat actors + sightings */}
-        {(threat_actors.length > 0 || sightings > 0) && (
-          <div className="flex flex-wrap items-center gap-3 text-xs text-fg-subtle">
-            {sightings > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" /> {sightings} sighting
-                {sightings !== 1 && "s"}
-              </span>
-            )}
-            {threat_actors.map((a) => (
-              <Badge key={a} tone="high">
-                {a}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {/* EDR on-host sightings */}
-        {edrHits.length > 0 && (
-          <div>
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase text-critical">
-              <Crosshair className="h-3.5 w-3.5" /> Observed on {edrHits.length} host
-              {edrHits.length !== 1 && "s"} (EDR)
-            </div>
-            <div className="space-y-1">
-              {edrHits.map((h, i) => (
-                <div
-                  key={`${h.host}:${i}`}
-                  className="rounded-md border border-critical/30 bg-critical/5 p-2 text-xs"
-                >
-                  <span className="font-mono text-fg">{h.host}</span>
-                  {h.user && <span className="text-fg-subtle"> · {h.user}</span>}
-                  {h.process && (
-                    <span className="text-fg-subtle"> · {h.process}</span>
-                  )}
-                  <div className="text-fg-subtle">{h.detail}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
+      <CardContent className="space-y-1.5 pt-0">{children}</CardContent>
     </Card>
   );
+}
+
+function KV({ k, v }: { k: string; v: string }) {
+  if (!v) return null;
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="w-32 shrink-0 text-xs uppercase text-fg-subtle">{k}</span>
+      <span className="break-all text-fg">{v}</span>
+    </div>
+  );
+}
+
+function RelList({ label, items }: { label: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-sm">
+      <span className="text-xs uppercase text-fg-subtle">{label}:</span>
+      {items.map((it) => (
+        <span key={it} className="rounded bg-[#172033] px-1.5 py-0.5 font-mono text-xs text-fg-subtle">
+          {it}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function hasRel(d: ThreatIntelligenceDossier) {
+  const r = d.relationships;
+  return (
+    r.related_ips.length + r.related_domains.length + r.related_hashes.length +
+      r.threat_actors.length >
+    0
+  );
+}
+
+function fmt(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleString() : "—";
 }

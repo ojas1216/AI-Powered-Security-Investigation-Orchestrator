@@ -42,6 +42,7 @@ include = ["app*"]
 
 [tool.setuptools.package-data]
 "app.engines.offline_cache.data" = ["*.json"]
+"app.engines.threat_intel.connectors.data" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

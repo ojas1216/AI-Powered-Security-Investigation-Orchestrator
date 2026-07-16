@@ -104,6 +104,8 @@ class Settings(BaseSettings):
     abuseipdb_api_key: str = ""
     greynoise_api_key: str = ""
     otx_api_key: str = ""
+    threatfox_api_key: str = ""  # abuse.ch Auth-Key (free); offline cache used otherwise
+    urlhaus_api_key: str = ""
     opencti_url: str = ""
     opencti_token: str = ""
     misp_url: str = ""

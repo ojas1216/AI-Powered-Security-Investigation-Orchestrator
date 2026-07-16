@@ -10,7 +10,17 @@ import type {
   ExecutiveSummary,
   GeneratedRule,
   InvestigationPackage,
+  ThreatIntelligenceDossier,
 } from "@/types/api";
+
+// ── Threat-intelligence dossier ──────────────────────────────────────────────
+
+export async function getDossier(indicator: string): Promise<ThreatIntelligenceDossier> {
+  const { data } = await http.post<ThreatIntelligenceDossier>("/intel/dossier", {
+    indicator,
+  });
+  return data;
+}
 
 // ── Executive intelligence ───────────────────────────────────────────────────
 

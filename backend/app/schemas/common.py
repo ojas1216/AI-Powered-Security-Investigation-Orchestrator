@@ -31,6 +31,13 @@ class IOCType(StrEnum):
     FILENAME = "filename"
     REGISTRY_KEY = "registry_key"
     MUTEX = "mutex"
+    # Extended threat-intelligence indicator types
+    ASN = "asn"
+    CIDR = "cidr"
+    JA3 = "ja3"
+    JA4 = "ja4"
+    TLS_CERT = "tls_cert"
+    PROCESS = "process"
 
 
 class InvestigationStatus(StrEnum):

@@ -1,0 +1,62 @@
+{
+  "source": "threatfox-offline-cache",
+  "note": "Representative sample entries for offline-first enrichment + regression fixtures. Refresh online via the ThreatFox API (Auth-Key) when AEGIS_THREATFOX_API_KEY is set.",
+  "iocs": {
+    "malware-c2.net": {
+      "ioc_type": "domain",
+      "threat_type": "botnet_cc",
+      "malware": "QakBot",
+      "malware_printable": "QakBot",
+      "confidence_level": 90,
+      "tags": ["qakbot", "c2", "botnet"],
+      "first_seen": "2026-05-01T08:00:00Z",
+      "last_seen": "2026-06-08T12:00:00Z",
+      "reporter": "abuse_ch",
+      "threat_description": "QakBot command-and-control endpoint delivering follow-on payloads.",
+      "reference": ["https://threatfox.abuse.ch/ioc/sample-malware-c2/"],
+      "related": ["45.155.205.99", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]
+    },
+    "45.155.205.99": {
+      "ioc_type": "ip:port",
+      "threat_type": "botnet_cc",
+      "malware": "QakBot",
+      "malware_printable": "QakBot",
+      "confidence_level": 85,
+      "tags": ["qakbot", "c2"],
+      "first_seen": "2026-05-02T09:00:00Z",
+      "last_seen": "2026-06-07T18:00:00Z",
+      "reporter": "abuse_ch",
+      "threat_description": "QakBot C2 IP infrastructure.",
+      "reference": ["https://threatfox.abuse.ch/ioc/sample-ip-c2/"],
+      "related": ["malware-c2.net"]
+    },
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": {
+      "ioc_type": "sha256_hash",
+      "threat_type": "payload",
+      "malware": "QakBot",
+      "malware_printable": "QakBot",
+      "confidence_level": 95,
+      "tags": ["qakbot", "loader"],
+      "first_seen": "2026-05-03T10:00:00Z",
+      "last_seen": "2026-06-06T14:00:00Z",
+      "reporter": "abuse_ch",
+      "threat_description": "QakBot loader dropped by the malicious LNK.",
+      "reference": ["https://threatfox.abuse.ch/ioc/sample-hash/"],
+      "related": ["malware-c2.net"]
+    },
+    "cobalt-strike-beacon.example": {
+      "ioc_type": "domain",
+      "threat_type": "botnet_cc",
+      "malware": "CobaltStrike",
+      "malware_printable": "Cobalt Strike",
+      "confidence_level": 88,
+      "tags": ["cobaltstrike", "beacon", "c2"],
+      "first_seen": "2026-04-10T00:00:00Z",
+      "last_seen": "2026-06-01T00:00:00Z",
+      "reporter": "abuse_ch",
+      "threat_description": "Cobalt Strike beacon C2 domain.",
+      "reference": ["https://threatfox.abuse.ch/ioc/sample-cobaltstrike/"],
+      "related": []
+    }
+  }
+}

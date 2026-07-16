@@ -184,6 +184,77 @@ export interface RootCause {
   narrative: string;
 }
 
+// ── Threat-intelligence dossier ──────────────────────────────────────────────
+
+export interface ProviderResult {
+  source: string;
+  verdict: Verdict;
+  confidence: number;
+  malware_family: string;
+  threat_category: string;
+  tags: string[];
+  references: string[];
+  detail: string;
+  ok: boolean;
+}
+export interface WhoisInfo {
+  registrar: string;
+  created: string | null;
+  expires: string | null;
+  age_days: number | null;
+  tld: string;
+  dnssec: boolean;
+  nameservers: string[];
+}
+export interface DnsRecords {
+  a: string[]; aaaa: string[]; mx: string[]; txt: string[]; ns: string[]; cname: string[];
+}
+export interface HostingInfo {
+  asn: string; isp: string; country: string; organization: string; cloud_provider: string;
+}
+export interface DossierRelationships {
+  related_ips: string[]; related_domains: string[]; related_urls: string[];
+  related_hashes: string[]; related_emails: string[]; campaigns: string[];
+  threat_actors: string[];
+}
+export interface DossierTimeline {
+  first_seen: string | null; last_seen: string | null; events: string[];
+}
+export interface MitreContext {
+  techniques: MitreTechnique[]; kill_chain: string[]; predicted_next: string[];
+}
+export interface DossierBusinessImpact {
+  technical_impact: string; business_impact: string;
+  potential_data_exposure: string; recommended_actions: string[];
+}
+export interface DossierConfidence {
+  score: number; rationale: string[]; supporting: string[]; rejected: string[];
+}
+export interface ThreatIntelligenceDossier {
+  indicator: string;
+  ioc_type: string;
+  status: string;
+  verdict: Verdict;
+  confidence: DossierConfidence;
+  risk_score: number;
+  classification: string;
+  whois: WhoisInfo | null;
+  dns: DnsRecords | null;
+  passive_dns: string[];
+  hosting: HostingInfo | null;
+  threat_intel: ProviderResult[];
+  relationships: DossierRelationships;
+  timeline: DossierTimeline;
+  mitre: MitreContext;
+  attribution: Attribution | null;
+  campaign_matches: FingerprintMatch[];
+  business_impact: DossierBusinessImpact | null;
+  references: string[];
+  evidence: string[];
+  executive_summary: string;
+  generated_at: string;
+}
+
 export interface ActorCount {
   actor_type: string;
   count: number;

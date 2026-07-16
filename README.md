@@ -111,8 +111,13 @@ timeline builder, MITRE mapping, copilot prompt-injection guards, RBAC/ABAC poli
 multi-tenant context + Postgres RLS, the FastAPI surface, and the orchestrator that wires it
 all together.
 
+**Threat-intelligence dossier engine:** one indicator → a complete dossier (per-provider
+verdicts, DNS/WHOIS/hosting, MITRE, relationships, campaign correlation, timeline, business
+impact, evidence) at `POST /api/v1/intel/dossier`. **ThreatFox** is the primary source —
+offline-first (bundled cache, zero credentials) and online via the official API.
+
 **Connector interfaces with runnable mock implementations** (swap in real creds to go live):
-VirusTotal, AbuseIPDB, GreyNoise, OpenCTI, MISP, OTX, Joe/Falcon/CAPE/Any.Run sandboxes,
+ThreatFox, VirusTotal, AbuseIPDB, GreyNoise, DShield, CIRCL, OpenCTI, MISP, OTX, Joe/Falcon/CAPE/Any.Run sandboxes,
 CrowdStrike/SentinelOne/Defender/Wazuh EDR, M365/Workspace/Mimecast/Proofpoint email,
 ServiceNow, Jira, Ollama.
 
