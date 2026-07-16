@@ -102,6 +102,21 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class PlanNode(BaseModel):
+    """One node of the investigation execution graph (planning layer)."""
+
+    id: str
+    tool: str
+    reason: str
+    status: str  # pending | running | done | failed | skipped
+    priority: int = 50
+    attempts: int = 0
+    depends_on: list[str] = Field(default_factory=list)
+    outcome: str = ""
+    ok: bool = True
+    duration_ms: float = 0.0
+
+
 class RelatedCase(BaseModel):
     """A past investigation recalled from long-term memory as similar to this one."""
 
@@ -138,5 +153,6 @@ class InvestigationPackage(BaseModel):
     related_investigations: list[RelatedCase] = Field(default_factory=list)
     business_impact: BusinessImpact | None = None
     root_cause: RootCause | None = None
+    plan_graph: list[PlanNode] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None

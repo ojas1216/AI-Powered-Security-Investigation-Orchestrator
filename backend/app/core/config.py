@@ -71,6 +71,9 @@ class Settings(BaseSettings):
 
     # ── Investigation dispatch ────────────────────────────────────────────
     # inline: supervised asyncio task in-process; temporal: durable workflow.
+    # Evidence-collection strategy: "batch" (flat re-plan loop, default) or
+    # "taskgraph" (dependency-aware Task Graph + Priority Scheduler w/ retry).
+    investigation_strategy: str = "batch"
     dispatch: str = "inline"
     max_concurrent_investigations: int = 100
 

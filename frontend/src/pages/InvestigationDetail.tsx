@@ -19,6 +19,7 @@ import { TimelineView } from "@/components/investigation/TimelineView";
 import { AttackGraph } from "@/components/graph/AttackGraph";
 import { MitreMatrix } from "@/components/mitre/MitreMatrix";
 import { AgentTrace } from "@/components/investigation/AgentTrace";
+import { PlanGraph } from "@/components/investigation/PlanGraph";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
 import { runAgent } from "@/services/platform";
@@ -51,7 +52,7 @@ export function InvestigationDetailPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          {["overview", "agent-trace", "detections", "timeline", "evidence", "threat-intel", "mitre", "graph", "notes", "reports"].map((t) => (
+          {["overview", "plan", "agent-trace", "detections", "timeline", "evidence", "threat-intel", "mitre", "graph", "notes", "reports"].map((t) => (
             <TabsTrigger key={t} value={t}>
               {t.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
             </TabsTrigger>
@@ -60,6 +61,16 @@ export function InvestigationDetailPage() {
 
         <TabsContent value="overview">
           <Overview pkg={pkg} />
+        </TabsContent>
+        <TabsContent value="plan">
+          <Card>
+            <CardHeader>
+              <CardTitle>Execution Graph ({pkg.plan_graph?.length ?? 0} tasks)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PlanGraph nodes={pkg.plan_graph ?? []} />
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="agent-trace">
           <Card>

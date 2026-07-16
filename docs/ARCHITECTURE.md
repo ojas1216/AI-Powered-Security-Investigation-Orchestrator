@@ -190,6 +190,26 @@ Exposed at `GET /api/v1/graph/{neighbors,campaign,path}` (RBAC:
 singleton so API reads see the loop's writes. Depth is hard-capped (6) so a
 query can't traverse the whole graph.
 
+### Planning layer (Task Graph + Priority Scheduler)
+
+An opt-in evolution of the batch planner toward autonomous execution
+(`agents/planning/`, `AEGIS_INVESTIGATION_STRATEGY=taskgraph`):
+
+- **PlanningEngine** lifts the deterministic `Planner`'s proposed actions into
+  explicit, deduplicated, dependency-linked **Tasks** (control flow stays
+  auditable — the rule-based planner still decides *what* is appropriate).
+- **TaskGraph** tracks nodes + dependency edges, dedups by (tool, params) against
+  *active* work (a completed task may re-run when new evidence re-proposes it —
+  e.g. re-enriching sandbox-dropped IOCs), and reports progress.
+- **PriorityScheduler** runs ready tasks concurrently highest-priority-first,
+  retries transient failures (bounded), re-expands as evidence unlocks new tasks,
+  and stops on convergence or budget. It reuses `run_tool` + the specialist
+  agents and feeds the same `finalize()`.
+- The execution graph ships on the package (`plan_graph`) and renders as the
+  investigation's **Plan** tab. The default `batch` strategy is unchanged, so
+  existing behavior and tests are preserved (parity test enforces identical
+  verdicts).
+
 ### Specialist-agent framework
 
 Every analytic capability is a `SpecialistAgent` (`app/agents/specialists/`): a

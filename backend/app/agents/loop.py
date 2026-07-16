@@ -49,13 +49,17 @@ class AutonomousInvestigator:
     def __init__(self, *, toolbox: Toolbox, graph: GraphClient, memory: CaseMemory,
                  planner: Planner | None = None, budget: Budget | None = None,
                  approvals: ApprovalService | None = None,
-                 case_index=None) -> None:
+                 case_index=None, strategy: str = "batch") -> None:
         self.toolbox = toolbox
         self.graph = graph
         self.memory = memory
         self.planner = planner or Planner()
         self.budget = budget or Budget()
         self.approvals = approvals or build_approval_service()
+        # Evidence-collection strategy: "batch" (flat re-plan loop, default) or
+        # "taskgraph" (dependency-aware Task Graph + Priority Scheduler with
+        # per-task retry/dedup/progress). Both feed the same finalize().
+        self.strategy = strategy
         if case_index is None:
             from app.engines.semantic import build_case_index
 
@@ -81,42 +85,11 @@ class AutonomousInvestigator:
         step_no = 0
         tool_calls = 0
 
-        for iteration in range(1, self.budget.max_iterations + 1):
-            elapsed = time.monotonic() - started
-            if elapsed > self.budget.max_wall_clock_seconds:
-                step_no += 1
-                trace.append(AgentTraceStep(
-                    step=step_no, iteration=iteration, phase="plan",
-                    action="stop", ok=False,
-                    reason=f"wall-clock budget exhausted after {elapsed:.1f}s",
-                    outcome="finalizing on partial evidence"))
-                break
-
-            actions = self.planner.next_actions(state)
-            if not actions:
-                break  # evidence collection converged
-
-            if tool_calls + len(actions) > self.budget.max_tool_calls:
-                actions = actions[: max(0, self.budget.max_tool_calls - tool_calls)]
-                if not actions:
-                    step_no += 1
-                    trace.append(AgentTraceStep(
-                        step=step_no, iteration=iteration, phase="plan",
-                        action="stop", ok=False,
-                        reason="tool-call budget exhausted",
-                        outcome="finalizing on partial evidence"))
-                    break
-
-            results = await asyncio.gather(
-                *(self.run_tool(state, a) for a in actions))
-            tool_calls += len(actions)
-            for action, (ok, outcome, duration_ms, started_at) in zip(
-                    actions, results, strict=True):
-                step_no += 1
-                trace.append(AgentTraceStep(
-                    step=step_no, iteration=iteration, phase="act",
-                    action=action.tool, reason=action.reason, outcome=outcome,
-                    ok=ok, duration_ms=duration_ms, started_at=started_at))
+        if self.strategy == "taskgraph":
+            step_no, tool_calls = await self._collect_taskgraph(state, pkg, trace)
+        else:
+            step_no, tool_calls = await self._collect_batch(
+                state, trace, started)
 
         with span("investigation.finalize", investigation_id=inv_id):
             await self.finalize(pkg, state, trace, step_no)
@@ -133,6 +106,75 @@ class AutonomousInvestigator:
                  trace_steps=len(pkg.agent_trace), tool_calls=tool_calls,
                  duration_seconds=round(duration, 3))
         return pkg
+
+    async def _collect_batch(self, state: InvestigationState,
+                             trace: list[AgentTraceStep], started: float,
+                             ) -> tuple[int, int]:
+        """Flat re-plan loop (default strategy)."""
+        step_no = 0
+        tool_calls = 0
+        for iteration in range(1, self.budget.max_iterations + 1):
+            if time.monotonic() - started > self.budget.max_wall_clock_seconds:
+                step_no += 1
+                trace.append(AgentTraceStep(
+                    step=step_no, iteration=iteration, phase="plan",
+                    action="stop", ok=False,
+                    reason="wall-clock budget exhausted",
+                    outcome="finalizing on partial evidence"))
+                break
+            actions = self.planner.next_actions(state)
+            if not actions:
+                break
+            if tool_calls + len(actions) > self.budget.max_tool_calls:
+                actions = actions[: max(0, self.budget.max_tool_calls - tool_calls)]
+                if not actions:
+                    step_no += 1
+                    trace.append(AgentTraceStep(
+                        step=step_no, iteration=iteration, phase="plan",
+                        action="stop", ok=False,
+                        reason="tool-call budget exhausted",
+                        outcome="finalizing on partial evidence"))
+                    break
+            results = await asyncio.gather(
+                *(self.run_tool(state, a) for a in actions))
+            tool_calls += len(actions)
+            for action, (ok, outcome, duration_ms, started_at) in zip(
+                    actions, results, strict=True):
+                step_no += 1
+                trace.append(AgentTraceStep(
+                    step=step_no, iteration=iteration, phase="act",
+                    action=action.tool, reason=action.reason, outcome=outcome,
+                    ok=ok, duration_ms=duration_ms, started_at=started_at))
+        return step_no, tool_calls
+
+    async def _collect_taskgraph(self, state: InvestigationState,
+                                 pkg: InvestigationPackage,
+                                 trace: list[AgentTraceStep]) -> tuple[int, int]:
+        """Dependency-aware Task Graph + Priority Scheduler strategy. Produces the
+        same trace as the batch loop plus a visualizable plan graph on the package.
+        """
+        from app.agents.planning import PriorityScheduler
+
+        async def execute(state_, tool, params):
+            return await self.run_tool(state_, PlannedAction(tool=tool, reason="",
+                                                             params=params))
+
+        scheduler = PriorityScheduler(execute, budget=self.budget)
+        result = await scheduler.run(state)
+        pkg.plan_graph = result.graph.to_plan_nodes()
+
+        step_no = 0
+        tool_calls = 0
+        for task in sorted(result.graph.all(), key=lambda t: (t.wave, t.id)):
+            if task.attempts == 0:
+                continue
+            step_no += 1
+            tool_calls += task.attempts
+            trace.append(AgentTraceStep(
+                step=step_no, iteration=task.wave, phase="act",
+                action=task.tool, reason=task.reason, outcome=task.outcome,
+                ok=task.ok, duration_ms=task.duration_ms))
+        return step_no, tool_calls
 
     async def run_tool(
         self, state: InvestigationState, action: PlannedAction,

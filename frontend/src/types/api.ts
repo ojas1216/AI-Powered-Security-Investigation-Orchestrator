@@ -184,6 +184,19 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface PlanNode {
+  id: string;
+  tool: string;
+  reason: string;
+  status: "pending" | "running" | "done" | "failed" | "skipped";
+  priority: number;
+  attempts: number;
+  depends_on: string[];
+  outcome: string;
+  ok: boolean;
+  duration_ms: number;
+}
+
 export interface AgentInfo {
   name: string;
   description: string;
@@ -253,6 +266,7 @@ export interface InvestigationPackage {
   related_investigations: RelatedCase[];
   business_impact: BusinessImpact | null;
   root_cause: RootCause | null;
+  plan_graph: PlanNode[];
   created_at: string;
   completed_at?: string | null;
 }

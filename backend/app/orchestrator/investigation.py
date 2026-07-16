@@ -33,10 +33,13 @@ class InvestigationOrchestrator:
             copilot=build_copilot(),
             ticketing=build_ticketing(),
         )
+        from app.core.config import settings
+
         self.agent = AutonomousInvestigator(
             toolbox=toolbox,
             graph=build_graph(),
             memory=build_case_memory(),
+            strategy=settings.investigation_strategy,
         )
 
     async def investigate(self, tenant: str, alert: Alert,
