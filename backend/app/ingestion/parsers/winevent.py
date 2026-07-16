@@ -94,7 +94,8 @@ def _parse_xml(text: str) -> list[dict]:
         raise ParseError("XML with a DTD/entity declaration is not accepted")
     try:
         # Wrap so multiple <Event> siblings without a root still parse.
-        root = ET.fromstring(f"<root>{_strip_ns(text)}</root>")  # noqa: S314 - DTD/entities rejected above
+        # DTD/entity declarations are rejected above, so this parse is safe.
+        root = ET.fromstring(f"<root>{_strip_ns(text)}</root>")  # noqa: S314  # nosec B314,B320
     except ET.ParseError as exc:
         raise ParseError(f"invalid event XML: {exc}") from exc
     events: list[dict] = []

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels:
+    app: {{ .Release.Name }}-api
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-api
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.targetPort }}"
+        prometheus.io/path: "{{ .Values.metrics.path }}"
+      {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/v1/healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/v1/readyz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 5

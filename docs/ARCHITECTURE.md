@@ -243,6 +243,20 @@ tenant) -> AgentResult` contract and discovery metadata. Agents:
 | ChromaDB   | RAG over historical incidents (copilot)   | per-tenant collection         |
 | Redis      | enrichment cache, rate-limit buckets      | key-prefixed per tenant       |
 
+## 4a. Deployment & hardening
+
+- **CI** (`.github/workflows/ci.yml`) gates every PR on ruff (app + tests), a
+  bandit security scan (`-ll`, medium+), the full pytest suite with coverage, and
+  the frontend typecheck + build.
+- **Helm** (`infra/helm/aegisflow`) packages the API with the same non-root /
+  read-only-rootfs / drop-ALL-caps posture as the raw manifests, an HPA
+  (3→30), and Prometheus scrape annotations for `/metrics`.
+- **Endpoint hardening**: every Phase 2–8 route is RBAC- and tenant-gated; the
+  agent-invocation payload is capped at 1 MiB, artifact upload at 10 MiB, and
+  untrusted XML is DTD/entity-rejected (XXE/billion-laughs). A concurrency test
+  drives 40 simultaneous investigations through the bounded dispatcher toward
+  the 10k-concurrent target.
+
 ## 5. Scaling model
 
 - Stateless API + workers scale horizontally behind the gateway.

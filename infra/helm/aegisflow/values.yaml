@@ -1,0 +1,53 @@
+# AegisFlow API — Helm values. Secrets come from Vault via External Secrets
+# Operator (existingSecret); never put credentials here.
+image:
+  repository: ghcr.io/aegisflow/api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 3
+
+# Name of the k8s Secret (populated by ExternalSecret) mounted as envFrom.
+existingSecret: aegis-api-secrets
+
+env:
+  AEGIS_ENV: production
+  AEGIS_CONNECTOR_MODE: live
+  AEGIS_PERSISTENCE: postgres
+  AEGIS_DISPATCH: temporal
+
+service:
+  port: 80
+  targetPort: 8000
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 30
+  targetCPUUtilizationPercentage: 65
+
+# Pod/container security context — non-root, read-only rootfs, no privilege escalation.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# Prometheus scrape of the always-on /metrics endpoint.
+metrics:
+  enabled: true
+  path: /metrics

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aegisflow
+description: AegisFlow — AI-Powered Security Investigation Orchestrator (API)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

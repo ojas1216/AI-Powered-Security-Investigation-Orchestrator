@@ -8,7 +8,7 @@ external orchestration without running a full investigation.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.agents.specialists import AgentInfo, AgentResult, get_agent_bundle
 from app.api.deps import require
@@ -22,9 +22,21 @@ log = get_logger("api.agents")
 _orchestrator = get_agent_bundle().orchestrator()
 
 
+_MAX_PAYLOAD_BYTES = 1_000_000  # 1 MiB cap on an agent invocation payload
+
+
 class AgentRunRequest(BaseModel):
     payload: dict = Field(default_factory=dict,
                           description="Agent-specific input; see the agent's input_hint")
+
+    @field_validator("payload")
+    @classmethod
+    def _cap_payload(cls, value: dict) -> dict:
+        import json
+
+        if len(json.dumps(value, default=str)) > _MAX_PAYLOAD_BYTES:
+            raise ValueError("agent payload exceeds 1 MiB")
+        return value
 
 
 @router.get("", response_model=list[AgentInfo])
