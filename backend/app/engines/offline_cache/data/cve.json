@@ -1,0 +1,47 @@
+{
+  "source": "bundled-seed",
+  "records": {
+    "CVE-2021-44228": {
+      "cvss": 10.0,
+      "severity": "critical",
+      "summary": "Apache Log4j2 JNDI features do not protect against attacker-controlled LDAP/JNDI lookups (Log4Shell), enabling remote code execution.",
+      "references": ["https://nvd.nist.gov/vuln/detail/CVE-2021-44228"],
+      "cwe": "CWE-502"
+    },
+    "CVE-2017-0144": {
+      "cvss": 8.1,
+      "severity": "high",
+      "summary": "SMBv1 remote code execution (EternalBlue) in Microsoft Windows; used by WannaCry and NotPetya.",
+      "references": ["https://nvd.nist.gov/vuln/detail/CVE-2017-0144"],
+      "cwe": "CWE-20"
+    },
+    "CVE-2021-26855": {
+      "cvss": 9.1,
+      "severity": "critical",
+      "summary": "Microsoft Exchange Server SSRF (ProxyLogon) allowing authentication bypass and remote code execution.",
+      "references": ["https://nvd.nist.gov/vuln/detail/CVE-2021-26855"],
+      "cwe": "CWE-918"
+    },
+    "CVE-2021-34527": {
+      "cvss": 8.8,
+      "severity": "high",
+      "summary": "Windows Print Spooler remote code execution (PrintNightmare).",
+      "references": ["https://nvd.nist.gov/vuln/detail/CVE-2021-34527"],
+      "cwe": "CWE-269"
+    },
+    "CVE-2020-1472": {
+      "cvss": 10.0,
+      "severity": "critical",
+      "summary": "Netlogon elevation of privilege (Zerologon) allowing domain-controller takeover.",
+      "references": ["https://nvd.nist.gov/vuln/detail/CVE-2020-1472"],
+      "cwe": "CWE-330"
+    },
+    "CVE-2014-0160": {
+      "cvss": 7.5,
+      "severity": "high",
+      "summary": "OpenSSL TLS heartbeat information disclosure (Heartbleed) leaking process memory.",
+      "references": ["https://nvd.nist.gov/vuln/detail/CVE-2014-0160"],
+      "cwe": "CWE-125"
+    }
+  }
+}

@@ -130,6 +130,20 @@ PENDING ──approve──▶ APPROVED ──mark executed──▶ EXECUTED
 - API: `GET /api/v1/approvals`, `POST /api/v1/approvals/{id}/decision`,
   `POST /api/v1/approvals/{id}/executed`. The package carries `approval_ids`.
 
+### Offline knowledge base
+
+`engines/offline_cache/` bundles seed datasets so ATT&CK/CVE/Sigma lookups work
+**fully air-gapped** out of the box, with best-effort online refresh:
+
+- **ATT&CK** (`attack.json`, 30+ techniques), **CVE** (`cve.json`, known
+  high-impact vulns with CVSS), **Sigma** (`sigma.json`, a rule pack).
+- Each dataset loads its bundled seed unless a refreshed copy exists in
+  `AEGIS_OFFLINE_CACHE_DIR`; `refresh()` pulls upstream (MITRE/NVD/SigmaHQ) when
+  online and never blocks offline use.
+- API: `GET /offline/status`, `/offline/attack/{id}`, `/offline/cve/{id}`,
+  `/offline/sigma` (converted to the DetectionRule DSL — importable into a
+  tenant's rules), `POST /offline/refresh/{dataset}` (detection:write).
+
 ### Observability
 
 - **Metrics** (`core/metrics.py`): a zero-dependency, thread-safe registry

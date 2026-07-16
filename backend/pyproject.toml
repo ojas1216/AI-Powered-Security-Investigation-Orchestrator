@@ -40,6 +40,9 @@ kafka = ["aiokafka>=0.11"]
 [tool.setuptools.packages.find]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.engines.offline_cache.data" = ["*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

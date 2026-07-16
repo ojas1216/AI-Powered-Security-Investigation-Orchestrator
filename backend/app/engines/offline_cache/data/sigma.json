@@ -1,0 +1,53 @@
+{
+  "source": "bundled-seed",
+  "rules": [
+    {
+      "id": "SIGMA-LSASS-DUMP-COMSVCS",
+      "title": "LSASS memory dump via comsvcs.dll MiniDump",
+      "severity": "critical",
+      "field": "text",
+      "modifier": "regex",
+      "values": ["comsvcs(\\.dll)?,\\s*minidump", "rundll32.+comsvcs.+minidump"],
+      "technique_id": "T1003.001",
+      "technique_name": "OS Credential Dumping: LSASS Memory",
+      "tactic": "credential-access",
+      "tags": ["credential-access", "sigmahq"]
+    },
+    {
+      "id": "SIGMA-WMIC-SHADOWCOPY-DELETE",
+      "title": "Volume shadow copy deletion via WMIC",
+      "severity": "critical",
+      "field": "text",
+      "modifier": "contains",
+      "values": ["wmic shadowcopy delete", "win32_shadowcopy"],
+      "technique_id": "T1490",
+      "technique_name": "Inhibit System Recovery",
+      "tactic": "impact",
+      "tags": ["ransomware", "impact", "sigmahq"]
+    },
+    {
+      "id": "SIGMA-RDP-ENABLE-REGISTRY",
+      "title": "RDP enabled via registry (fDenyTSConnections)",
+      "severity": "medium",
+      "field": "text",
+      "modifier": "contains",
+      "values": ["fdenytsconnections"],
+      "technique_id": "T1021.001",
+      "technique_name": "Remote Desktop Protocol",
+      "tactic": "lateral-movement",
+      "tags": ["lateral-movement", "sigmahq"]
+    },
+    {
+      "id": "SIGMA-BITSADMIN-DOWNLOAD",
+      "title": "Ingress tool transfer via bitsadmin",
+      "severity": "high",
+      "field": "text",
+      "modifier": "regex",
+      "values": ["bitsadmin\\s+/transfer", "bitsadmin.+/addfile"],
+      "technique_id": "T1105",
+      "technique_name": "Ingress Tool Transfer",
+      "tactic": "command-and-control",
+      "tags": ["command-and-control", "sigmahq"]
+    }
+  ]
+}

@@ -129,6 +129,10 @@ class Settings(BaseSettings):
     embedding_dim: int = 256
     embedding_model: str = "nomic-embed-text"
 
+    # ── Offline dataset caches (ATT&CK / CVE / Sigma) ─────────────────────────
+    # Refreshed copies land here; the bundled seed is always the fallback.
+    offline_cache_dir: str = "./data/offline_cache"
+
     # ── Ticketing ─────────────────────────────────────────────────────────────
     servicenow_instance: str = ""
     servicenow_user: str = ""
