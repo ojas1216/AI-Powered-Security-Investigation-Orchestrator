@@ -210,6 +210,19 @@ An opt-in evolution of the batch planner toward autonomous execution
   existing behavior and tests are preserved (parity test enforces identical
   verdicts).
 
+### Multi-format detection engineering
+
+`engines/detection_export/` turns an investigation's confirmed indicators into
+deployable detections for nine platforms — **Sigma, YARA, Suricata, Splunk SPL,
+Sentinel KQL, Chronicle YARA-L, Elastic EQL, Wazuh, CrowdStrike Falcon**. Sigma
+and YARA reuse the Milestone-5 generation agents (no duplication); the rest are
+deterministic per-format generators. Every rule is self-explaining per the
+detection-engineering contract: **rationale, supporting evidence, and estimated
+precision/recall** (hash rules high-precision/low-recall, network-IOC rules
+broader). YARA is emitted only when hashes exist; a benign incident yields only
+the behavioral Sigma. Served at `GET /detections/export/{investigation_id}`
+(detection:read, tenant-gated), surfaced in the Detections tab.
+
 ### Predictive attack path & response engine
 
 - **Prediction** (`engines/prediction/`): from the reconstructed kill chain

@@ -184,6 +184,16 @@ export interface RootCause {
   narrative: string;
 }
 
+export interface GeneratedRule {
+  format: string;
+  title: string;
+  rule: string;
+  rationale: string;
+  evidence: string[];
+  estimated_precision: number;
+  estimated_recall: number;
+}
+
 export interface PredictedAction {
   tactic: string;
   technique_id: string;

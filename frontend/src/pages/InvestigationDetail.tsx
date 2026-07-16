@@ -26,6 +26,7 @@ import { IncidentDna } from "@/components/investigation/IncidentDna";
 import { ActorBadge } from "@/components/investigation/ActorBadge";
 import { Prediction } from "@/components/investigation/Prediction";
 import { ResponsePlan } from "@/components/investigation/ResponsePlan";
+import { DetectionExport } from "@/components/investigation/DetectionExport";
 import { DetectionsPanel } from "@/components/investigation/DetectionsPanel";
 import { RelatedCases } from "@/components/investigation/RelatedCases";
 import { runAgent } from "@/services/platform";
@@ -93,6 +94,7 @@ export function InvestigationDetailPage() {
         </TabsContent>
         <TabsContent value="detections">
           <div className="space-y-4">
+            <DetectionExport investigationId={pkg.investigation_id} />
             <RuleExport pkg={pkg} />
             <DetectionsPanel detections={pkg.detections ?? []} />
           </div>

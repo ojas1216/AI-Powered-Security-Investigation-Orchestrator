@@ -7,8 +7,18 @@ import type {
   CaseSearchHit,
   CveRecord,
   DatasetStatus,
+  GeneratedRule,
   InvestigationPackage,
 } from "@/types/api";
+
+// ── Multi-format detection export ────────────────────────────────────────────
+
+export async function exportDetections(investigationId: string): Promise<GeneratedRule[]> {
+  const { data } = await http.get<GeneratedRule[]>(
+    `/detections/export/${encodeURIComponent(investigationId)}`,
+  );
+  return data;
+}
 
 // ── Campaigns ────────────────────────────────────────────────────────────────
 

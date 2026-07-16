@@ -19,16 +19,19 @@ from app.engines.detection import (
     build_detection_engine,
     build_rule_store,
 )
+from app.engines.detection_export import build_detection_export_engine
 from app.ingestion.normalizers import get_normalizer
+from app.repository import get_repo
 from app.schemas.alert import RawAlert
 from app.schemas.common import SourceProduct
-from app.schemas.investigation import DetectionMatch
+from app.schemas.investigation import DetectionMatch, GeneratedRule
 
 router = APIRouter()
 log = get_logger("api.detections")
 
 _engine = build_detection_engine()
 _store = build_rule_store()
+_export = build_detection_export_engine()
 
 
 class RuleListResponse(BaseModel):
@@ -82,3 +85,15 @@ async def evaluate_alert(
     source = SourceProduct(payload.get("source", "generic"))
     alert = get_normalizer(source).normalize(payload)
     return _engine.evaluate(alert, extra_rules=_store.list(principal.tenant))
+
+
+@router.get("/export/{investigation_id}", response_model=list[GeneratedRule])
+async def export_detections(
+    investigation_id: str,
+    principal: Principal = Depends(require(Permission.DETECTION_READ)),
+) -> list[GeneratedRule]:
+    """Generate deployable detections (Sigma/YARA/Suricata/SPL/KQL/YARA-L/EQL/
+    Wazuh/Falcon) from an investigation's confirmed indicators, each with
+    rationale + estimated precision/recall."""
+    pkg = get_repo().get(principal.tenant, investigation_id)  # tenant-gated
+    return _export.generate(pkg)

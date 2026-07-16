@@ -102,6 +102,24 @@ class AgentTraceStep(BaseModel):
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class GeneratedRule(BaseModel):
+    """A detection rule/query generated for a specific SIEM/EDR format.
+
+    Every generated rule is self-explaining per the detection-engineering
+    contract: why it was generated, which evidence supports it, and estimated
+    precision/recall so a detection engineer can triage before deploying.
+    """
+
+    format: str  # sigma | yara | suricata | splunk_spl | sentinel_kql |
+    #              chronicle_yaral | elastic_eql | wazuh | falcon
+    title: str
+    rule: str
+    rationale: str = ""
+    evidence: list[str] = Field(default_factory=list)
+    estimated_precision: float = Field(default=0.0, ge=0.0, le=1.0)
+    estimated_recall: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
 class PredictedAction(BaseModel):
     """A likely next attacker move, with its probability and how to prevent it."""
 
