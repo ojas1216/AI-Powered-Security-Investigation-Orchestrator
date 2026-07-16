@@ -25,9 +25,12 @@ backend/app
 ├── agents/          autonomous investigation core:
 │   ├── planner.py       dynamic, deterministic action planner (budgeted)
 │   ├── loop.py          plan → act → observe → re-plan → finalize
-│   ├── tools.py         typed tool registry wrapping every engine
+│   ├── tools.py         state-folding tools (delegate analytic work to specialists)
 │   ├── memory.py        long-term case memory (tenant-isolated recall)
-│   └── state.py         working memory of one investigation
+│   ├── state.py         working memory of one investigation
+│   └── specialists/     typed, independently-callable specialist agents
+│       ├── base.py          SpecialistAgent, AgentRegistry, AgentOrchestrator
+│       └── agents.py        ThreatIntel/EdrHunt/Detection/Mitre/Risk/Memory/…
 ├── engines/
 │   ├── detection/         Sigma-inspired rule DSL + engine, built-in ATT&CK-mapped
 │   │                      rule pack, tenant-scoped custom rules (author via API)
@@ -124,6 +127,25 @@ PENDING ──approve──▶ APPROVED ──mark executed──▶ EXECUTED
 - **Audit**: every transition logs actor, tenant, request id and note.
 - API: `GET /api/v1/approvals`, `POST /api/v1/approvals/{id}/decision`,
   `POST /api/v1/approvals/{id}/executed`. The package carries `approval_ids`.
+
+### Specialist-agent framework
+
+Every analytic capability is a `SpecialistAgent` (`app/agents/specialists/`): a
+typed, stateless, **independently callable** unit with a uniform `run(payload,
+tenant) -> AgentResult` contract and discovery metadata. Agents:
+`ioc_extraction`, `threat_intel`, `detection`, `edr_hunt`, `sandbox`, `email`,
+`mitre`, `risk`, `memory`.
+
+- **Single source of truth**: the autonomous loop's state-folding tools delegate
+  their analytic step to the matching agent — there is exactly one implementation
+  per capability, and test-injected engines (e.g. a broken EDR) flow through
+  unchanged.
+- **Independently callable**: `GET /api/v1/agents` lists the catalog;
+  `POST /api/v1/agents/{name}/run` invokes any single agent (RBAC: `agent:run`).
+  Useful for ad-hoc analysis and external orchestration without a full case.
+- **Auditable by design**: agents are stateless and take `tenant` explicitly;
+  action *selection* stays in the deterministic planner, so LLM/agent output can
+  never steer which agents run.
 
 ### Detection engineering & threat hunting
 

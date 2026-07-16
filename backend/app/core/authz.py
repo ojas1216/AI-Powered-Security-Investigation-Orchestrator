@@ -36,6 +36,7 @@ class Permission(StrEnum):
     DETECTION_READ = "detection:read"
     DETECTION_WRITE = "detection:write"
     HUNT_RUN = "hunt:run"
+    AGENT_RUN = "agent:run"
     ADMIN = "admin:*"
 
 
@@ -71,6 +72,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.TICKET_CREATE,
             Permission.DETECTION_READ,
             Permission.HUNT_RUN,
+            Permission.AGENT_RUN,
         }
     ),
     Role.TIER3: frozenset(
@@ -85,6 +87,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.DETECTION_READ,
             Permission.DETECTION_WRITE,
             Permission.HUNT_RUN,
+            Permission.AGENT_RUN,
         }
     ),
     Role.THREAT_HUNTER: frozenset(
@@ -96,6 +99,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.DETECTION_READ,
             Permission.DETECTION_WRITE,
             Permission.HUNT_RUN,
+            Permission.AGENT_RUN,
         }
     ),
     Role.INCIDENT_RESPONDER: frozenset(
@@ -108,6 +112,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.TICKET_CREATE,
             Permission.DETECTION_READ,
             Permission.HUNT_RUN,
+            Permission.AGENT_RUN,
         }
     ),
     Role.AUDITOR: frozenset(

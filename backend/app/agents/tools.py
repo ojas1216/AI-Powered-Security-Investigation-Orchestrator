@@ -96,6 +96,26 @@ class Toolbox:
         self.ticketing = ticketing
         self.detection = detection or build_detection_engine()
         self.rule_store = rule_store or build_rule_store()
+
+        # Specialist agents wrap the *injected* engines, so the loop's tools and
+        # the /agents API share one implementation per capability (no duplication)
+        # and test-injected engines (e.g. a broken EDR) flow through unchanged.
+        from app.agents.specialists import (
+            DetectionAgent,
+            EdrHuntAgent,
+            EmailAgent,
+            IocExtractionAgent,
+            SandboxAgent,
+            ThreatIntelAgent,
+        )
+
+        self.ioc_agent = IocExtractionAgent()
+        self.ti_agent = ThreatIntelAgent(self.ti)
+        self.edr_agent = EdrHuntAgent(self.edr)
+        self.sandbox_agent = SandboxAgent(self.sandbox)
+        self.email_agent = EmailAgent(self.email)
+        self.detection_agent = DetectionAgent(self.detection, self.rule_store)
+
         self.registry = ToolRegistry()
         self.registry.register(
             "run_detections",
@@ -130,7 +150,7 @@ class Toolbox:
 
     async def run_detections(self, state: InvestigationState) -> str:
         tenant_rules = self.rule_store.list(state.tenant)
-        matches = self.detection.evaluate(state.alert, extra_rules=tenant_rules)
+        matches = self.detection_agent.evaluate(state.alert, extra_rules=tenant_rules)
         state.detections = matches
         state.detections_ran = True
         # Rule titles are behavioral signals; the keyword MITRE mapper benefits too.
@@ -146,11 +166,11 @@ class Toolbox:
 
     async def fetch_email_context(self, state: InvestigationState) -> str:
         msg_id = str(state.alert.extra.get("message_id", state.alert.source_alert_id))
-        msg = await self.email.get_message(msg_id)
+        msg = await self.email_agent.get_message(msg_id)
         state.email_msg = msg
         state.email_checked = True
         state.text_corpus += "\n" + msg.body + "\n" + "\n".join(msg.urls)
-        recipients = await self.email.find_recipients(msg_id)
+        recipients = await self.email_agent.find_recipients(msg_id)
         state.affected_users |= set(recipients) | set(state.alert.users)
         state.timeline_groups.append([
             TimelineEvent(timestamp=msg.received_at, actor=msg.sender,
@@ -165,7 +185,7 @@ class Toolbox:
                 f"{len(msg.attachments)} attachments")
 
     async def extract_iocs_tool(self, state: InvestigationState) -> str:
-        iocs = extract_iocs(state.text_corpus)
+        iocs = self.ioc_agent.extract(state.text_corpus)
         iocs = _merge_source_entities(iocs, state)
         new = state.add_iocs(iocs)
         state.extracted = True
@@ -175,7 +195,7 @@ class Toolbox:
         batch = list(state.pending_iocs.values())
         if not batch:
             return "nothing pending"
-        results = await self.ti.enrich_many(batch)
+        results = await self.ti_agent.enrich(batch)
         state.record_enrichment(results)
         for e in results:
             if e.verdict is not Verdict.UNKNOWN:
@@ -187,7 +207,7 @@ class Toolbox:
 
     async def detonate_attachment(self, state: InvestigationState, *,
                                   filename: str, sha256: str) -> str:
-        report = await self.sandbox.detonate(filename=filename)
+        report = await self.sandbox_agent.detonate(filename=filename)
         state.detonated.add(sha256)
         state.sandbox_malscore = max(state.sandbox_malscore, report.malscore)
         state.signals.extend(report.signatures)
@@ -208,7 +228,7 @@ class Toolbox:
         targets = [state.enriched[k].ioc for k in ioc_keys if k in state.enriched]
         if not targets:
             return "no hunt targets"
-        hits = await self.edr.hunt(targets)
+        hits = await self.edr_agent.hunt(targets)
         state.hunted_keys |= set(ioc_keys)
         state.edr_hits.extend(hits)
         if hits:
