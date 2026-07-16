@@ -21,7 +21,9 @@ backend/app
 ├── core/            config, structured logging, OIDC/JWT, RBAC+ABAC, tenancy, OTel
 ├── schemas/         Pydantic v2 contracts (Alert, IOC, Investigation, ...)
 ├── db/              SQLAlchemy 2.x models, session, RLS helpers
-├── ingestion/       SIEM normalizers → common Alert schema
+├── ingestion/       SIEM normalizers + artifact parsers → common Alert schema
+│   └── parsers/         .eml, Windows/Sysmon event (.xml/.json), .csv/.txt
+│                        (stdlib-only, XXE-hardened) → Alert → investigate
 ├── agents/          autonomous investigation core:
 │   ├── planner.py       dynamic, deterministic action planner (budgeted)
 │   ├── loop.py          plan → act → observe → re-plan → finalize
