@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Download, Loader2, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Loader2, Search } from "lucide-react";
 import { getDossier } from "@/services/platform";
 import { useAudit } from "@/hooks/useAudit";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -18,7 +18,21 @@ import { EmptyState, ErrorState } from "@/components/common/states";
 import { VerdictBadge } from "@/components/common/badges";
 import { CopyButton } from "@/components/common/CopyButton";
 import { ActorBadge } from "@/components/investigation/ActorBadge";
+import { DossierGraph } from "@/components/investigation/DossierGraph";
 import type { ThreatIntelligenceDossier } from "@/types/api";
+
+function ConfidenceBar({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const tone = pct >= 75 ? "bg-critical" : pct >= 40 ? "bg-high" : "bg-info";
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-[#172033]">
+        <span className={`block h-full ${tone}`} style={{ width: `${pct}%` }} />
+      </span>
+      <span className="text-xs text-fg-subtle">{pct}%</span>
+    </span>
+  );
+}
 
 export function IocReportPage() {
   const [params, setParams] = useSearchParams();
@@ -125,6 +139,13 @@ export function IocReportPage() {
 }
 
 function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
+  const [filter, setFilter] = useState("");
+  const providers = d.threat_intel.filter((p) =>
+    !filter ||
+    `${p.source} ${p.malware_family} ${p.threat_category} ${p.detail}`
+      .toLowerCase()
+      .includes(filter.toLowerCase()),
+  );
   return (
     <div className="space-y-4">
       {/* Overview */}
@@ -145,11 +166,8 @@ function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
             <span>
               risk <span className="font-semibold text-fg">{d.risk_score}/100</span>
             </span>
-            <span>
-              confidence{" "}
-              <span className="font-semibold text-fg">
-                {Math.round(d.confidence.score * 100)}%
-              </span>
+            <span className="inline-flex items-center gap-1.5">
+              confidence <ConfidenceBar value={d.confidence.score} />
             </span>
             {d.classification && <span>classification {d.classification}</span>}
           </div>
@@ -163,6 +181,14 @@ function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
 
       {/* Threat intelligence */}
       <Section title={`Threat Intelligence (${d.threat_intel.length} sources)`}>
+        <div className="mb-2">
+          <Input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter sources / malware / category…"
+            className="max-w-xs"
+          />
+        </div>
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase text-fg-subtle">
@@ -176,11 +202,11 @@ function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {d.threat_intel.map((p, i) => (
+              {providers.map((p, i) => (
                 <tr key={`${p.source}:${i}`}>
                   <td className="px-3 py-2 font-medium text-fg">{p.source}</td>
                   <td className="px-3 py-2"><VerdictBadge verdict={p.verdict} /></td>
-                  <td className="px-3 py-2 text-fg-subtle">{Math.round(p.confidence * 100)}%</td>
+                  <td className="px-3 py-2"><ConfidenceBar value={p.confidence} /></td>
                   <td className="px-3 py-2 text-fg-subtle">{p.malware_family || "—"}</td>
                   <td className="px-3 py-2 text-fg-subtle">{p.threat_category || "—"}</td>
                   <td className="px-3 py-2 text-fg-subtle">{p.detail || "—"}</td>
@@ -190,6 +216,12 @@ function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
           </table>
         </div>
       </Section>
+
+      {hasRel(d) && (
+        <Section title="Relationship Graph">
+          <DossierGraph indicator={d.indicator} rel={d.relationships} />
+        </Section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {d.whois && (
@@ -295,12 +327,23 @@ function Dossier({ d }: { d: ThreatIntelligenceDossier }) {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center gap-1.5 text-left"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-fg-subtle" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-fg-subtle" />
+          )}
+          <CardTitle className="text-sm">{title}</CardTitle>
+        </button>
       </CardHeader>
-      <CardContent className="space-y-1.5 pt-0">{children}</CardContent>
+      {open && <CardContent className="space-y-1.5 pt-0">{children}</CardContent>}
     </Card>
   );
 }
